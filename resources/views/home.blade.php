@@ -1,6 +1,6 @@
 @extends('layouts.portal')
 
-@section('title', 'CERNIX — Secure Exam Verification')
+@section('title', 'Secure Exam Verification')
 
 @section('content')
 <style>

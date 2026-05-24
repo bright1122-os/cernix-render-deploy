@@ -1,6 +1,6 @@
 @extends('layouts.portal')
 
-@section('title', 'Documentation — CERNIX')
+@section('title', 'Documentation')
 
 @section('content')
 <style>

@@ -11,7 +11,7 @@
     <div class="admin-section-body">
         <form class="admin-filter" method="GET">
             <input name="q" value="{{ request('q') }}" placeholder="Search RRR, matric, name">
-            <select name="department"><option value="">All departments</option>@foreach($departments as $department)<option value="{{ $department }}" @selected(request('department')===$department)>{{ $department }}</option>@endforeach</select>
+            <select name="department_id"><option value="">All departments</option>@foreach($departments as $department)<option value="{{ $department->dept_id }}" @selected((string) request('department_id') === (string) $department->dept_id)>{{ $department->dept_name }}</option>@endforeach</select>
             <input name="date_from" value="{{ request('date_from') }}" type="date">
             <input name="date_to" value="{{ request('date_to') }}" type="date">
             <button class="admin-action">Apply</button><a class="admin-action ghost" href="{{ route('admin.payments') }}">Reset</a>

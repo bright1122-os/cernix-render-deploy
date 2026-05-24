@@ -1,6 +1,6 @@
 @extends('layouts.portal')
 
-@section('title', 'CERNIX — Secure Exam Verification')
+@section('title', 'Secure Exam Verification')
 
 @section('content')
 <style>
@@ -23,7 +23,7 @@
     .hero::after {
         content: ""; position: absolute; right: 28px; bottom: 26px;
         width: 150px; height: 150px; background: url('/aaua-logo.png') center / contain no-repeat;
-        opacity: .045; pointer-events: none;
+        opacity: .11; pointer-events: none;
     }
     .logo-mark {
         display: inline-flex; align-items: center; gap: 10px;

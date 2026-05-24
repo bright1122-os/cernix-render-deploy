@@ -3,7 +3,14 @@ set -eu
 
 cd /var/www/html
 
-PORT="${PORT:-10000}"
+APP_PORT="${PORT:-10000}"
+
+case "$APP_PORT" in
+    ''|*[!0-9]*)
+        echo "Invalid PORT value '$APP_PORT'. Falling back to 10000."
+        APP_PORT=10000
+        ;;
+esac
 
 php artisan config:clear || true
 php artisan route:clear || true
@@ -20,4 +27,4 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-exec php artisan serve --host=0.0.0.0 --port="${PORT}"
+exec php artisan serve --host=0.0.0.0 --port="$APP_PORT"

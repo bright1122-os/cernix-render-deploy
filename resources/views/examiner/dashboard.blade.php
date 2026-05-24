@@ -28,6 +28,7 @@
     .pending-panel { display:none; margin-top:14px; border:1px solid #f1d189; border-radius:16px; background:#fff8e5; padding:14px; color:#4c2f1d; }
     .pending-panel.show { display:grid; gap:10px; }
     .pending-panel b { color:#92400e; }
+    .scanner-control-hidden { display:none !important; }
     .verify-overlay { position: fixed; inset: 0; z-index: 1000; padding: clamp(14px, 4vw, 34px); background: rgba(23,32,27,.52); overflow-y: auto; overscroll-behavior: contain; animation: overlayIn .18s ease both; }
     .verify-overlay[hidden] { display: none; }
     .verify-document { position: relative; width: min(760px, 100%); margin: 0 auto; border-radius: 28px; border: 1px solid var(--result-border); background: var(--result-bg); color: #291f16; box-shadow: 0 30px 90px rgba(0,0,0,.28); overflow: hidden; animation: resultIn .2s ease both; }
@@ -106,8 +107,8 @@
                 <div class="scanner-state" id="scannerState">Camera permission needed. Hold the QR steady inside the frame. Use good lighting. Move closer if not detected.</div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap">
                     <button class="ex-action" type="button" id="startScanner">Start Scanner</button>
-                    <button class="ex-action secondary" type="button" id="stopScanner">Stop Scanner</button>
-                    <button class="ex-action secondary" type="button" id="retryScanner">Restart Camera</button>
+                    <button class="ex-action secondary scanner-control-hidden" type="button" id="stopScanner">Stop Scanner</button>
+                    <button class="ex-action secondary scanner-control-hidden" type="button" id="retryScanner">Restart Camera</button>
                 </div>
             </div>
         </div>
@@ -193,6 +194,11 @@
     let serverReachable = true;
 
     function setState(message) { stateText.textContent = message; }
+    function setScannerControls(mode) {
+        startBtn.classList.toggle('scanner-control-hidden', mode === 'active' || mode === 'starting');
+        stopBtn.classList.toggle('scanner-control-hidden', mode === 'idle' || mode === 'error');
+        retryBtn.classList.toggle('scanner-control-hidden', mode !== 'error');
+    }
     function normalizeStatus(status) { return String(status || 'REJECTED').toUpperCase(); }
     function statusTheme(status) {
         status = normalizeStatus(status);
@@ -303,8 +309,9 @@
     async function startScanner() {
         unlockAudio();
         try {
-            stopScanner();
+            stopScanner(false);
             setState('Starting camera...');
+            setScannerControls('starting');
             startBtn.disabled = true;
             stream = await navigator.mediaDevices.getUserMedia({
                 video: {
@@ -338,14 +345,16 @@
             lastPayload = '';
             lastScanAt = 0;
             setState('Scanner active. Point camera at QR code.');
+            setScannerControls('active');
             animationFrameId = requestAnimationFrame(tick);
         } catch (error) {
             setState('Camera permission denied or unavailable. Check browser permissions and retry.');
+            setScannerControls('error');
         } finally {
             startBtn.disabled = false;
         }
     }
-    function stopScanner() {
+    function stopScanner(resetControls = true) {
         scanning = false;
         if (animationFrameId) {
             cancelAnimationFrame(animationFrameId);
@@ -359,6 +368,7 @@
         verifying = false;
         scanFrame.classList.remove('detected');
         idleText.style.display = '';
+        if (resetControls) setScannerControls('idle');
     }
     function tick() {
         if (!scanning || !video.videoWidth || !video.videoHeight) {
@@ -513,6 +523,7 @@
     overlay.addEventListener('click', event => { if (event.target === overlay) closeOverlay(); });
     window.addEventListener('beforeunload', stopScanner);
     setInterval(updateConnectionStatus, 15000);
+    setScannerControls('idle');
     updateConnectionStatus();
 </script>
 @endpush

@@ -1,12 +1,12 @@
-@extends('layouts.portal')
-
-@section('title', 'Examiner Login')
-
-@section('content')
 @php
     $mode = $mode ?? 'examiner';
     $isAdminLogin = $mode === 'admin';
 @endphp
+@extends('layouts.portal')
+
+@section('title', $isAdminLogin ? 'Admin Login' : 'Examiner Login')
+
+@section('content')
 <style>
     .login-shell { min-height: 100vh; background: var(--bg); display: flex; flex-direction: column; animation: fadeUp .35s ease both; }
     .login-body  { flex: 1; padding: 24px 20px 48px; max-width: 480px; margin: 0 auto; width: 100%; }
@@ -101,7 +101,9 @@
 
         <div class="sec-note" style="margin-top:20px">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-            All scan activity is recorded and linked to your examiner account.
+            {{ $isAdminLogin
+                ? 'Admin access is recorded and linked to your control-center account.'
+                : 'All scan activity is recorded and linked to your examiner account.' }}
         </div>
     </div>
 </div>

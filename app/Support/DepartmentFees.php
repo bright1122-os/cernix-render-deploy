@@ -2,9 +2,6 @@
 
 namespace App\Support;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-
 final class DepartmentFees
 {
     public const FACULTY = 'Faculty of Computing';
@@ -123,19 +120,7 @@ final class DepartmentFees
 
     public static function isDemoMode(): bool
     {
-        $storedDemoMode = false;
-
-        try {
-            if (Schema::hasTable('cernix_settings')) {
-                $raw = DB::table('cernix_settings')->where('key', 'demo_mode_enabled')->value('value');
-                $storedDemoMode = in_array(strtolower((string) $raw), ['1', 'true', 'yes', 'on'], true);
-            }
-        } catch (\Throwable) {
-            $storedDemoMode = false;
-        }
-
         return app()->environment(['local', 'testing', 'staging'])
-            || (bool) config('app.cernix_demo_mode', false)
-            || (! app()->environment('production') && $storedDemoMode);
+            || (bool) config('app.cernix_demo_mode', false);
     }
 }

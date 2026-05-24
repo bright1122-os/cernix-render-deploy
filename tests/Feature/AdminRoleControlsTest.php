@@ -87,6 +87,42 @@ class AdminRoleControlsTest extends TestCase
         ])->get('/examiner/dashboard')->assertOk();
     }
 
+    public function test_admin_like_session_reaches_examiner_login_denial_not_admin_dashboard(): void
+    {
+        $super = DB::table('examiners')->where('username', 'superadmin')->first();
+
+        $this->followingRedirects()
+            ->withSession([
+                'examiner_id' => $super->examiner_id,
+                'examiner_username' => $super->username,
+                'examiner_name' => $super->full_name,
+                'examiner_role' => $super->role,
+            ])
+            ->get('/examiner/dashboard')
+            ->assertOk()
+            ->assertSee('Examiner Login')
+            ->assertSee('This account is not permitted to access the Examiner portal.')
+            ->assertDontSee('Super Admin Control Center');
+    }
+
+    public function test_examiner_session_reaches_admin_login_denial_not_admin_dashboard(): void
+    {
+        $examiner = DB::table('examiners')->where('username', 'examiner1')->first();
+
+        $this->followingRedirects()
+            ->withSession([
+                'examiner_id' => $examiner->examiner_id,
+                'examiner_username' => $examiner->username,
+                'examiner_name' => $examiner->full_name,
+                'examiner_role' => $examiner->role,
+            ])
+            ->get('/admin/dashboard')
+            ->assertOk()
+            ->assertSee('Admin Login')
+            ->assertSee('Admin access required. Sign in with an admin account.')
+            ->assertDontSee('Admin Operations');
+    }
+
     public function test_admin_session_cannot_post_to_examiner_verification(): void
     {
         $admin = DB::table('examiners')->where('username', 'admin1')->first();

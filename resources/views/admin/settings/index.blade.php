@@ -86,9 +86,10 @@
         <div class="admin-section-body">
             <div class="admin-info-list">
                 <div class="admin-info-row"><span class="admin-label">Environment</span><span class="admin-value">{{ $demoStatus['app_env'] }}</span></div>
-                <div class="admin-info-row"><span class="admin-label">Effective Status</span><span class="admin-value">{{ $demoStatus['enabled'] ? 'Enabled' : 'Disabled' }}</span></div>
-                <div class="admin-info-row"><span class="admin-label">Environment Override</span><span class="admin-value">{{ $demoStatus['environment_enabled'] ? 'Enabled by APP_ENV/config' : 'Not enabled by environment' }}</span></div>
-                <div class="admin-info-row"><span class="admin-label">Stored Switch</span><span class="admin-value">{{ $demoStatus['stored_enabled'] ? 'Enabled' : 'Disabled' }}</span></div>
+                <div class="admin-info-row"><span class="admin-label">Effective Status</span><span class="admin-value">{{ $demoStatus['enabled'] ? ($demoStatus['source'] === 'Public Demo Mode Enabled' ? 'Public Demo Mode Enabled' : 'Enabled') : 'Disabled' }}</span></div>
+                <div class="admin-info-row"><span class="admin-label">Demo Source</span><span class="admin-value">{{ $demoStatus['source'] }}</span></div>
+                <div class="admin-info-row"><span class="admin-label">Environment Override</span><span class="admin-value">{{ $demoStatus['environment_demo_enabled'] ? 'Enabled by APP_ENV=' . $demoStatus['app_env'] : 'Not enabled by APP_ENV' }}</span></div>
+                <div class="admin-info-row"><span class="admin-label">Stored Switch</span><span class="admin-value">{{ $demoStatus['stored_enabled'] ? 'Enabled (does not override production env)' : 'Disabled' }}</span></div>
                 <div class="admin-info-row"><span class="admin-label">Allowed Test RRR Pattern</span><span class="admin-value mono">TEST-*</span></div>
             </div>
 
@@ -99,7 +100,7 @@
                         <input type="checkbox" name="demo_mode_enabled" value="1" @checked($demoStatus['stored_enabled'])>
                         Enable stored demo mode
                     </label>
-                    <p class="muted" style="margin:8px 0 12px">Local, testing, and staging environments remain demo-enabled even when this stored switch is off.</p>
+                    <p class="muted" style="margin:8px 0 12px">Local, testing, and staging environments are demo-enabled by environment. In production, public demo mode is controlled by CERNIX_DEMO_MODE=true.</p>
                     <button class="admin-action" type="submit">Save Demo Mode</button>
                 </form>
             @else

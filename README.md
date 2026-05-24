@@ -20,6 +20,24 @@ Project/testing context images supplied by the project owner are documented in [
 
 The first role-system phase adds the Super Admin foundation only. The implementation notes and future role roadmap are maintained in [docs/roles-and-permissions.md](docs/roles-and-permissions.md).
 
+## Python Intelligence Module
+
+CERNIX includes an optional Python-powered intelligence module at `python_services/risk_analyzer/`. Laravel remains the main web application; the Python module only analyzes exported verification/audit/payment-style logs and produces a JSON risk report for admin review.
+
+The module does not handle authentication, payment verification, QR generation, QR scanning, cryptographic secrets, or token lifecycle logic. It works from JSON input, so it can be used offline or integrated later after Laravel exports safe operational fields.
+
+Run the sample analyzer with:
+
+```bash
+python python_services/risk_analyzer/analyze.py
+```
+
+Laravel can export safe scan log data for the analyzer with:
+
+```bash
+php artisan cernix:export-risk-data
+```
+
 ## Deployment
 
 Render Docker deployment notes are maintained in [docs/render-deployment.md](docs/render-deployment.md). The Docker setup uses PHP 8.4, PostgreSQL, local committed demo passport images, and Render's `PORT` environment variable.

@@ -11,6 +11,7 @@ use App\Services\RemitaService;
 use App\Support\DepartmentFees;
 use App\Support\MatricNumber;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -29,7 +30,7 @@ class StudentWebController extends Controller
         return view('student.register', compact('session', 'departments', 'feeMap', 'faculties'));
     }
 
-    public function register(Request $request): JsonResponse
+    public function register(Request $request): JsonResponse|RedirectResponse
     {
         $data = $request->validate([
             'faculty' => 'nullable|string|max:100',
@@ -123,6 +124,10 @@ class StudentWebController extends Controller
                 ['token_id' => $result['data']['token_id'], 'session_id' => $session->session_id]
             );
 
+            if (! $request->expectsJson()) {
+                return redirect()->route('student.dashboard');
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Registration successful. Opening your exam dashboard.',
@@ -133,6 +138,10 @@ class StudentWebController extends Controller
                 ],
             ]);
         } catch (\Throwable $e) {
+            if (! $request->expectsJson()) {
+                return back()->withErrors(['registration' => $e->getMessage()])->withInput();
+            }
+
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
     }

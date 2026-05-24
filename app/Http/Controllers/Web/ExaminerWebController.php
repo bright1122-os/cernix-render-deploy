@@ -25,7 +25,9 @@ class ExaminerWebController extends Controller
             }
 
             if (Roles::isAdminLike($request->session()->get('examiner_role'))) {
-                return redirect()->route('admin.dashboard');
+                $request->session()->flash('error', 'This account is not permitted to access the Examiner portal.');
+
+                return view('examiner.login', ['mode' => 'examiner']);
             }
         }
 
@@ -408,6 +410,15 @@ class ExaminerWebController extends Controller
     private function examinerNotes(int $examinerId)
     {
         if (! Schema::hasTable('admin_notes')) {
+            return collect();
+        }
+
+        $hasVisibleNotes = DB::table('admin_notes')
+            ->whereIn('visibility', ['examiner', 'both'])
+            ->whereNull('resolved_at')
+            ->exists();
+
+        if (! $hasVisibleNotes) {
             return collect();
         }
 

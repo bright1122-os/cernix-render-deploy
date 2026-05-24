@@ -1,0 +1,98 @@
+{
+  "generated_at": "2026-05-24T05:40:08.289776+00:00",
+  "total_scans": 8,
+  "approved_count": 1,
+  "rejected_count": 4,
+  "duplicate_count": 3,
+  "high_risk_students": [
+    {
+      "matric_no": "230408010",
+      "student_id": "230408010",
+      "department": "Data Science",
+      "level": "300",
+      "score": 90,
+      "risk_level": "high",
+      "reasons": [
+        "more than two rejected scans",
+        "student appears from multiple device fingerprints",
+        "student appears from multiple IP addresses",
+        "payment status is not verified",
+        "QR status is outside expected UNUSED/USED states"
+      ],
+      "scan_count": 3,
+      "rejected_count": 3,
+      "device_count": 2,
+      "ip_count": 3
+    },
+    {
+      "matric_no": "220404008",
+      "student_id": "220404008",
+      "department": "Computer Science",
+      "level": "400",
+      "score": 30,
+      "risk_level": "low",
+      "reasons": [
+        "same token appears in duplicate scan activity"
+      ],
+      "scan_count": 2,
+      "rejected_count": 0,
+      "device_count": 1,
+      "ip_count": 1
+    }
+  ],
+  "suspicious_examiners": [
+    {
+      "examiner_id": "3",
+      "examiner_name": "Examiner Two",
+      "score": 35,
+      "risk_level": "medium",
+      "reasons": [
+        "unusually high rejected scan volume"
+      ],
+      "scan_count": 6,
+      "rejected_count": 4,
+      "duplicate_count": 2,
+      "max_two_minute_burst": 5
+    }
+  ],
+  "suspicious_devices": [
+    {
+      "device_fp": "device-shared",
+      "score": 55,
+      "risk_level": "medium",
+      "reasons": [
+        "appears across many students",
+        "has too many rejected or duplicate scans"
+      ],
+      "student_count": 4,
+      "scan_count": 5,
+      "rejected_or_duplicate_count": 5
+    }
+  ],
+  "suspicious_ips": [
+    {
+      "ip_address": "10.10.0.50",
+      "score": 55,
+      "risk_level": "medium",
+      "reasons": [
+        "appears across many students",
+        "has too many rejected or duplicate scans"
+      ],
+      "student_count": 4,
+      "scan_count": 4,
+      "rejected_or_duplicate_count": 4
+    }
+  ],
+  "risk_summary": {
+    "low": 1,
+    "medium": 3,
+    "high": 1,
+    "overall_level": "high"
+  },
+  "recommendations": [
+    "Prioritize high-risk findings for manual admin review.",
+    "Review high-risk students before issuing replacement or reprint access passes.",
+    "Inspect suspicious examiner activity against hall assignment and scan timing.",
+    "Check repeated device fingerprints or IP addresses for shared-phone or proxy patterns."
+  ]
+}

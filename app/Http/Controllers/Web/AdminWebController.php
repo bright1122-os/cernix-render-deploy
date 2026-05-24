@@ -287,6 +287,7 @@ class AdminWebController extends Controller
                     ->orWhere('payment_records.student_id', 'like', $q)
                     ->orWhere('students.full_name', 'like', $q));
             })
+            ->when($request->filled('department_id'), fn ($query) => $query->where('students.department_id', $request->integer('department_id')))
             ->when($request->filled('department'), fn ($query) => $query->where('departments.dept_name', $request->input('department')))
             ->when($request->filled('date_from'), fn ($query) => $query->whereDate('payment_records.verified_at', '>=', $request->input('date_from')))
             ->when($request->filled('date_to'), fn ($query) => $query->whereDate('payment_records.verified_at', '<=', $request->input('date_to')))
@@ -294,7 +295,7 @@ class AdminWebController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        $departments = DB::table('departments')->orderBy('dept_name')->pluck('dept_name');
+        $departments = DB::table('departments')->orderBy('dept_name')->get(['dept_id', 'dept_name']);
 
         return view('admin.payments.index', compact('payments', 'departments'));
     }
@@ -490,11 +491,22 @@ class AdminWebController extends Controller
             'is_super_admin' => $this->isSuperAdminSession($request),
         ];
         $storedDemoMode = $this->setting('demo_mode_enabled', 'false');
-        $envDemoMode = app()->environment(['local', 'testing', 'staging']) || (bool) config('app.cernix_demo_mode', false);
+        $environmentDemoMode = app()->environment(['local', 'testing', 'staging']);
+        $configuredDemoMode = (bool) config('app.cernix_demo_mode', false);
+        $envDemoMode = $environmentDemoMode || $configuredDemoMode;
+        $demoSource = match (true) {
+            $environmentDemoMode => 'Environment: ' . app()->environment(),
+            app()->environment('production') && $configuredDemoMode => 'Public Demo Mode Enabled',
+            $configuredDemoMode => 'CERNIX_DEMO_MODE=true',
+            default => 'Not enabled',
+        };
         $demoStatus = [
             'app_env' => app()->environment(),
             'enabled' => DepartmentFees::isDemoMode(),
             'environment_enabled' => $envDemoMode,
+            'environment_demo_enabled' => $environmentDemoMode,
+            'configured_demo_enabled' => $configuredDemoMode,
+            'source' => $demoSource,
             'stored_enabled' => in_array(strtolower((string) $storedDemoMode), ['1', 'true', 'yes', 'on'], true),
             'mock_sis_records' => $this->safeCount('mock_sis'),
             'demo_passports' => count(glob(public_path('demo-passports/student-*.jpg')) ?: []),

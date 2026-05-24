@@ -95,7 +95,7 @@
     </header>
 
     <section class="sr-shell">
-        <form id="reg-form" class="sr-panel">
+        <form id="reg-form" class="sr-panel" method="POST" action="{{ route('student.register') }}">
             @csrf
             <div class="sr-panel-head">
                 <div class="cx-eyebrow">Exam Access</div>
@@ -299,7 +299,7 @@
 
         const payload = await response.json().catch(() => ({ success: false, message: 'Registration failed.' }));
         if (response.ok && payload.success && payload.redirect_url) {
-            window.location.assign(payload.redirect_url);
+            window.location.href = payload.redirect_url;
             return;
         }
 

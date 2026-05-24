@@ -17,10 +17,10 @@ If your GitHub repository wraps the app inside a `cernix/` subfolder, set the Re
 5. Use `Dockerfile` from the Laravel root.
 6. Set the service port through Render's `PORT` variable. The container defaults to `10000` locally.
 
-The container starts with:
+The container starts through `scripts/render-start.sh`, which validates Render's `PORT` value before calling Laravel:
 
 ```bash
-php artisan serve --host=0.0.0.0 --port=${PORT:-10000}
+php artisan serve --host=0.0.0.0 --port="$APP_PORT"
 ```
 
 ## 3. PostgreSQL
@@ -104,7 +104,7 @@ php artisan db:seed --force
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
-php artisan serve --host=0.0.0.0 --port=${PORT:-10000}
+php artisan serve --host=0.0.0.0 --port="$APP_PORT"
 ```
 
 The seeders are idempotent. To skip seeding on a future Render deploy, set:

@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CERNIX — @yield('title', 'Exam Verification System')</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    @php
+        $rawTitle = trim($__env->yieldContent('title', 'Exam Verification System'));
+        $documentTitle = \Illuminate\Support\Str::startsWith($rawTitle, 'CERNIX')
+            ? $rawTitle
+            : 'CERNIX — ' . $rawTitle;
+    @endphp
+    <title>{{ $documentTitle }}</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @stack('head')
 </head>

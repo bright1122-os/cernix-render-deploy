@@ -25,7 +25,7 @@ class StudentDashboardController extends Controller
 
     public function examAccessId(Request $request)
     {
-        return $this->portalView($request, 'student.exam-access-id', 'exam-access-id');
+        return $this->portalView($request, 'student.exam-access-id', 'exam-access-id', true);
     }
 
     public function timetable(Request $request)
@@ -89,7 +89,7 @@ class StudentDashboardController extends Controller
 
     public function printPass(Request $request)
     {
-        return $this->portalView($request, 'student.exam-pass', 'print');
+        return $this->portalView($request, 'student.exam-pass', 'print', true);
     }
 
     public function scanDetail(Request $request, int $log)
@@ -135,9 +135,9 @@ class StudentDashboardController extends Controller
         return redirect()->route('student.register');
     }
 
-    private function portalView(Request $request, string $view, string $active)
+    private function portalView(Request $request, string $view, string $active, bool $includeQrSvg = false)
     {
-        $payload = $this->dashboardPayload($request);
+        $payload = $this->dashboardPayload($request, $includeQrSvg);
         if ($payload instanceof RedirectResponse) {
             return $payload;
         }
@@ -145,7 +145,7 @@ class StudentDashboardController extends Controller
         return view($view, array_merge($payload, ['activePortal' => $active]));
     }
 
-    private function dashboardPayload(Request $request): array|RedirectResponse
+    private function dashboardPayload(Request $request, bool $includeQrSvg = false): array|RedirectResponse
     {
         $matricNo = $request->session()->get('student_matric_no');
         $sessionId = $request->session()->get('student_session_id');
@@ -183,7 +183,7 @@ class StudentDashboardController extends Controller
             ->first();
 
         $qrSvg = null;
-        if ($qrToken) {
+        if ($includeQrSvg && $qrToken) {
             $qrSvg = (new QrTokenService(new CryptoService()))->buildQrCode([
                 'token_id' => $qrToken->token_id,
                 'encrypted_payload' => $qrToken->encrypted_payload,
@@ -256,6 +256,15 @@ class StudentDashboardController extends Controller
     private function studentNotes(string $matricNo)
     {
         if (! Schema::hasTable('admin_notes')) {
+            return collect();
+        }
+
+        $hasVisibleNotes = DB::table('admin_notes')
+            ->whereIn('visibility', ['student', 'both'])
+            ->whereNull('resolved_at')
+            ->exists();
+
+        if (! $hasVisibleNotes) {
             return collect();
         }
 
