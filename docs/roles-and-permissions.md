@@ -1,43 +1,75 @@
-# CERNIX Roles And Permissions Roadmap
+# CERNIX Roles And Permissions
 
-This document records the planned administrative role model. Only the Super Admin foundation is implemented in this phase; the remaining roles are documented so later work can add permissions without changing verification logic.
+This document summarizes the implemented role model used by the current CERNIX app.
 
-## Implemented Foundation
+Role values are stored in lowercase form:
 
-### Super Admin
+- `examiner`
+- `admin`
+- `super_admin`
 
-- Highest administrative role.
-- Intended for full system control across sessions, timetable, students, payments, examiners, admin notes, audit trail, and settings.
-- Seeded as a local/demo admin account through the examiner/admin user table.
-- Can create other Super Admin accounts from the examiner management page.
+The application normalizes role values before checking access.
 
-## Planned Roles
+## Examiner
 
-### Exam Officer
+Examiners use only the Examiner portal.
 
-- Exam operations control.
-- Manages timetable, scan logs, attendance, review queue, and reports.
-- No system settings authority.
+Allowed:
 
-### Department Admin
+- Log in at `/examiner/login`.
+- Use the live QR scanner.
+- View own scanner workflow pages such as scan history, today’s exams, student records, audit trail, and examiner notifications where enabled.
 
-- Department-scoped visibility over students, payments, timetable, and scan history.
-- No global control outside assigned department.
+Not allowed:
 
-### Auditor
+- Access `/admin/*` routes.
+- Manage students, payments, settings, roles, or system-wide configuration.
+- Log in through the Admin portal.
 
-- Read-only access to verification logs, reports, payments, scan history, and audit trail.
-- Cannot edit records, resolve actions, or create operational changes.
+## Admin
 
-### Examiner
+Admins use the Admin portal for operational monitoring.
 
-- Scanner-only portal access.
-- Can verify QR codes through server-controlled verification.
-- Can view own scan history and today’s exams.
-- No admin panel access.
+Allowed:
 
-## Implementation Notes
+- Log in at `/admin/login`.
+- View dashboard, students, payments, timetable, scan logs, audit/activity views, notes, notifications, and risk intelligence.
+- Manage regular operational records where the current UI exposes safe controls.
 
-- Role values stored in the `examiners.role` column use lowercase values such as `examiner`, `admin`, and `super_admin`.
-- Application helpers normalize roles internally before comparison.
-- Future permission checks should protect only sensitive actions first; they should not lock the whole admin panel behind unfinished role logic.
+Restricted:
+
+- Cannot enter the Examiner portal.
+- Cannot create or deactivate Super Admin users.
+- Cannot change role hierarchy or sensitive system-wide controls reserved for Super Admin.
+- Cannot use Super Admin-only maintenance or settings actions.
+
+## Super Admin
+
+Super Admin uses the Admin portal, not the Examiner portal.
+
+Allowed:
+
+- Access all Admin-level pages.
+- Manage role-sensitive settings where implemented.
+- Manage fee mapping, active session controls, examiner/admin management, notes, audit views, and risk intelligence where the current UI exposes those actions.
+- Create or manage higher-privilege accounts where the current user-management screen supports it.
+
+Restricted:
+
+- Cannot log into the Examiner portal with Super Admin credentials.
+- Should use a separate Examiner account if the scanner workflow needs to be tested.
+
+## Notes
+
+- Admin and Super Admin routes are protected server-side.
+- Examiner routes allow only the `examiner` role.
+- Admin routes allow `admin` and `super_admin`.
+- Student-facing routes are separate from examiner/admin authentication.
+
+## Future Enhancements
+
+The following roles are future options and should not be documented as active until implemented:
+
+- Exam Officer
+- Department Admin
+- Auditor

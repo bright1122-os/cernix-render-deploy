@@ -1,19 +1,28 @@
 # CERNIX Local Demo Data
 
-For demo/testing purposes, use the sample pattern below. In production, students enter their real faculty, department, matric number, and Remita RRR.
+This note describes the local/demo data shape used by CERNIX. It is intended for maintainers and academic testing, not as a public credential sheet.
 
-The registration screen intentionally shows only three collapsible examples. All 20 records below remain available for manual local testing.
+In production, students use real university records and real payment references. Demo payment references work only when demo mode is enabled through the environment.
 
 ## Demo Matric Pattern
 
-Format: `YYDDFFNNN`
+CERNIX now builds the matric number from the registration selections instead of asking the student to type the full number.
+
+Format: `YY FF DD NNN`
 
 Example: `220404008`
 
-- `22` = admission year/session code
-- `04` = department code
+- `22` = level/year code
 - `04` = Faculty of Computing code
+- `04` = Computer Science department code
 - `008` = student number
+
+Level/year codes:
+
+- 100 level = `25`
+- 200 level = `24`
+- 300 level = `23`
+- 400 level = `22`
 
 Faculty code:
 
@@ -21,37 +30,38 @@ Faculty code:
 
 Department codes and fixed school fees:
 
-- Computer Science = `04` = `₦100,000`
-- Software Engineering = `05` = `₦120,000`
-- Information Technology = `06` = `₦110,000`
-- Cyber Security = `07` = `₦140,000`
-- Data Science = `08` = `₦150,000`
+- Computer Science = `04` = `N100,000`
+- Software Engineering = `05` = `N120,000`
+- Information Technology = `06` = `N110,000`
+- Cyber Security = `07` = `N140,000`
+- Data Science = `08` = `N150,000`
 
-Demo RRR values run from `TEST-0001` to `TEST-0020`. Each RRR is tied to the department school fee shown below.
+## Student Number Range
 
-## Demo Students
+The current demo passport set supports student numbers `001` through `014`. The registration UI should show a clear message if a demo student number is outside the available photo range.
 
-| Name | Faculty | Department | Level | Matric Number | RRR | School Fee | Photo Path |
-| --- | --- | --- | ---: | --- | --- | ---: | --- |
-| Chidera Favour Nnamdi | Faculty of Computing | Computer Science | 300 | `220404001` | `TEST-0001` | `₦100,000` | `demo-passports/student-001.jpg` |
-| Chukwuemeka Daniel Nwosu | Faculty of Computing | Computer Science | 400 | `220404008` | `TEST-0002` | `₦100,000` | `demo-passports/student-002.jpg` |
-| Ifeoma Grace Okafor | Faculty of Computing | Software Engineering | 300 | `220504001` | `TEST-0003` | `₦120,000` | `demo-passports/student-003.jpg` |
-| Adaeze Jennifer Obi | Faculty of Computing | Software Engineering | 400 | `220504008` | `TEST-0004` | `₦120,000` | `demo-passports/student-004.jpg` |
-| Tunde Michael Bello | Faculty of Computing | Information Technology | 300 | `220604001` | `TEST-0005` | `₦110,000` | `demo-passports/student-005.jpg` |
-| Chiamaka Ruth Eze | Faculty of Computing | Information Technology | 400 | `220604008` | `TEST-0006` | `₦110,000` | `demo-passports/student-006.jpg` |
-| Toluwani Deborah Akinola | Faculty of Computing | Cyber Security | 300 | `220704001` | `TEST-0007` | `₦140,000` | `demo-passports/student-007.jpg` |
-| Somtochukwu David Okafor | Faculty of Computing | Cyber Security | 400 | `220704008` | `TEST-0008` | `₦140,000` | `demo-passports/student-008.jpg` |
-| Ayomide Samuel Adeyemi | Faculty of Computing | Data Science | 300 | `220804001` | `TEST-0009` | `₦150,000` | `demo-passports/student-009.jpg` |
-| Amara Blessing Nwankwo | Faculty of Computing | Data Science | 400 | `220804008` | `TEST-0010` | `₦150,000` | `demo-passports/student-010.jpg` |
-| Femi Joshua Akinola | Faculty of Computing | Computer Science | 100 | `230404011` | `TEST-0011` | `₦100,000` | `demo-passports/student-011.jpg` |
-| Zainab Maryam Bello | Faculty of Computing | Computer Science | 200 | `230404012` | `TEST-0012` | `₦100,000` | `demo-passports/student-012.jpg` |
-| Kemi Victoria Adeyemi | Faculty of Computing | Software Engineering | 100 | `230504011` | `TEST-0013` | `₦120,000` | `demo-passports/student-013.jpg` |
-| Ibrahim Musa Adamu | Faculty of Computing | Software Engineering | 200 | `230504012` | `TEST-0014` | `₦120,000` | `demo-passports/student-014.jpg` |
-| Chinedu Victor Eze | Faculty of Computing | Information Technology | 100 | `230604011` | `TEST-0015` | `₦110,000` | `demo-passports/student-015.jpg` |
-| Ngozi Esther Chukwu | Faculty of Computing | Information Technology | 200 | `230604012` | `TEST-0016` | `₦110,000` | `demo-passports/student-016.jpg` |
-| Temilade Sarah Ogunleye | Faculty of Computing | Cyber Security | 100 | `230704011` | `TEST-0017` | `₦140,000` | `demo-passports/student-017.jpg` |
-| Uche David Nnamdi | Faculty of Computing | Cyber Security | 200 | `230704012` | `TEST-0018` | `₦140,000` | `demo-passports/student-018.jpg` |
-| Emeka Kingsley Obi | Faculty of Computing | Data Science | 100 | `230804011` | `TEST-0019` | `₦150,000` | `demo-passports/student-019.jpg` |
-| Adebayo Oluwaseun Emmanuel | Faculty of Computing | Data Science | 200 | `230804012` | `TEST-0020` | `₦150,000` | `demo-passports/student-020.jpg` |
+Passport files are stored locally under:
 
-Demo passport photos are supplied local mock portraits stored in `public/demo-passports/`. They are not real AAUA student photos, and the application renders local `public/demo-passports/*.jpg` files without hotlinking external portrait URLs at runtime.
+```text
+public/demo-passports/
+```
+
+The application should reference them with relative public paths such as:
+
+```text
+demo-passports/student-001.jpg
+```
+
+Do not use Windows file paths, temporary upload paths, external portrait URLs, or RandomUser photos at runtime.
+
+## Demo Payment Behavior
+
+Demo payment references are accepted only when demo mode is enabled. The demo payment shortcut confirms a demo school-fee payment for testing, but it does not bypass identity validation, department/level validation, QR security, token lifecycle rules, scanner verification, or production Remita behavior.
+
+For real production deployments, keep demo mode disabled.
+
+## Privacy Note
+
+Demo passport photos are local mock assets used for controlled testing. They are not real AAUA student records.
+
+Project/team photos belong in project documentation only and must not be used as student identity or passport photos.

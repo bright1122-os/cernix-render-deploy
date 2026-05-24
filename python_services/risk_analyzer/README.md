@@ -101,10 +101,7 @@ Do not include:
 - real Remita keys
 - real database URLs
 
-RRR values are masked in reports:
-
-- `TEST-DEMO` becomes `TEST-****`
-- `123456789012` becomes `********9012`
+RRR/payment reference values are masked in reports. Demo-style references keep only their public prefix, while numeric references keep only the final few digits.
 
 ## Output Format
 

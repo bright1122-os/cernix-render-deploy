@@ -417,7 +417,7 @@
         <!-- Intro -->
         <div class="chapter">
             <h2>A cryptographic key to the exam hall.</h2>
-            <p>CERNIX is a secure examination verification system that replaces paper rosters with encrypted, signed QR tokens. This guide explains how it works, why it matters, and what makes it secure.</p>
+            <p>CERNIX is a secure examination access system that replaces paper rosters with server-verifiable QR exam passes. This guide explains how it works, why it matters, and how the roles fit together.</p>
         </div>
 
         <!-- Problem -->
@@ -444,8 +444,8 @@
         <!-- Solution -->
         <div class="chapter">
             <div class="chapter-num">The Solution</div>
-            <h2>One signed token. One clean tap.</h2>
-            <p>Each registered student receives a single encrypted QR token. At the hall door, an examiner scans it. The signature is verified instantly. Green light means admitted.</p>
+            <h2>One verified pass. One clean tap.</h2>
+            <p>Each registered student receives a server-verifiable QR exam pass after identity, session, and payment state checks. At the hall door, an examiner scans it and the server returns an admission decision.</p>
             <div class="pull-quote">
                 "We did not invent a new cipher. We applied a familiar one — carefully — to a problem the campus already had."
                 <span class="source">— Project notes</span>
@@ -455,15 +455,13 @@
         <!-- Cryptography -->
         <div class="chapter">
             <div class="chapter-num">Cryptography</div>
-            <h2>Forging a token means breaking AES-256.</h2>
-            <p>Every token is encrypted with AES-256-GCM and signed with a per-session HMAC-SHA256 secret. Once scanned, the token ID is marked as used. A second scan from a screenshot triggers a warning.</p>
-            <div class="code-block">const token = aesGcm.encrypt(
-  { matric, session_id, nonce, ts },
-  SESSION_KEY
-);
-const signature = hmac(token, HMAC_SECRET);
-// → One-time use, verified in ~280ms
-✓ valid</div>
+            <h2>Security is enforced by the server.</h2>
+            <p>The QR pass is protected by the Laravel application and checked against the token lifecycle before admission. Once approved, a repeated scan produces a duplicate warning.</p>
+            <div class="code-block">1. Confirm student and session
+2. Confirm payment state
+3. Verify one-time QR status
+4. Record approved, rejected, or duplicate
+server verified</div>
         </div>
 
         <!-- Flow -->
@@ -471,9 +469,9 @@ const signature = hmac(token, HMAC_SECRET);
             <div class="chapter-num">The Flow</div>
             <h2>From registration to verified entry.</h2>
             <ol>
-                <li><strong>Register:</strong> Student enters matric number and Remita RRR. Payment is verified in real time.</li>
-                <li><strong>Receive QR:</strong> An encrypted token is generated and saved to the student's lock screen.</li>
-                <li><strong>Scan at the door:</strong> Examiner taps "Scan." The signature is verified in under a second.</li>
+                <li><strong>Register:</strong> Student selects faculty, department, level, and student number. CERNIX generates the matric number and checks payment state.</li>
+                <li><strong>Receive QR:</strong> A protected QR exam pass is generated for the verified student and session.</li>
+                <li><strong>Scan at the door:</strong> Examiner starts the scanner. The server verifies the pass and returns a decision.</li>
                 <li><strong>Admit:</strong> Green for admitted, red for rejected, amber for already used. Decision is logged.</li>
             </ol>
         </div>
@@ -486,7 +484,7 @@ const signature = hmac(token, HMAC_SECRET);
                 <div class="role-card">
                     <div class="label">Student</div>
                     <div class="title">Register, save, walk in.</div>
-                    <div class="desc">Enter your details, receive a token, show it at the door. That's all.</div>
+                    <div class="desc">Enter registration details, receive a QR exam pass, and show it at the door.</div>
                 </div>
                 <div class="role-card">
                     <div class="label">Examiner</div>
@@ -514,12 +512,12 @@ const signature = hmac(token, HMAC_SECRET);
                 <div class="role-card">
                     <div class="label">Backend</div>
                     <div class="title">Laravel 11</div>
-                    <div class="desc">Blade templating, OpenSSL crypto, SQLite database, Remita API integration.</div>
+                    <div class="desc">Blade templating, OpenSSL-backed security, PostgreSQL-ready data storage, and payment configuration.</div>
                 </div>
                 <div class="role-card">
                     <div class="label">Frontend</div>
                     <div class="title">HTML / CSS / JS</div>
-                    <div class="desc">Responsive design, vanilla JavaScript, jsQR library, touch gestures.</div>
+                    <div class="desc">Responsive Blade views, compiled assets, scanner controls, and mobile-friendly interactions.</div>
                 </div>
             </div>
         </div>

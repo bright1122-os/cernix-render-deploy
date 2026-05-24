@@ -31,38 +31,22 @@ Render provides a PostgreSQL connection string as `DATABASE_URL`. CERNIX support
 
 ## 4. Required Environment Variables
 
-Set these on the Render Web Service:
+Set these on the Render Web Service. Store actual values in Render only:
 
-```env
-APP_NAME=CERNIX
-APP_ENV=production
-APP_KEY=
-APP_DEBUG=false
-APP_URL=
-
-LOG_CHANNEL=stderr
-LOG_LEVEL=info
-
-DB_CONNECTION=pgsql
-DATABASE_URL=
-
-CACHE_STORE=database
-SESSION_DRIVER=database
-QUEUE_CONNECTION=database
-FILESYSTEM_DISK=public
-
-CERNIX_DEMO_MODE=false
-
-REMITA_MERCHANT_ID=
-REMITA_API_KEY=
-REMITA_SERVICE_TYPE_ID=
-REMITA_BASE_URL=
-REMITA_PUBLIC_KEY=
-REMITA_SECRET_KEY=
-
-CERNIX_HMAC_KEY=
-CERNIX_ENCRYPTION_KEY=
-```
+- `APP_NAME` set to `CERNIX`
+- `APP_ENV` set to `production`
+- `APP_KEY` generated privately
+- `APP_DEBUG` set to `false`
+- `APP_URL` set to the Render HTTPS URL
+- `LOG_CHANNEL` set to `stderr`
+- `LOG_LEVEL` set to `info`
+- `DB_CONNECTION` set to `pgsql`
+- `DATABASE_URL` from Render PostgreSQL
+- `CACHE_STORE`, `SESSION_DRIVER`, and `QUEUE_CONNECTION` set to database-backed drivers
+- `FILESYSTEM_DISK` set to `public`
+- `CERNIX_DEMO_MODE` set to `false` for real production
+- Remita merchant/API/service/base URL values, stored privately
+- CERNIX cryptographic keys, stored privately
 
 Generate the app key locally:
 
@@ -82,7 +66,7 @@ Production defaults should keep:
 CERNIX_DEMO_MODE=false
 ```
 
-For a public demo where `TEST-` RRR values should work, manually set:
+For a public demo where demo payment references should work, manually set:
 
 ```env
 CERNIX_DEMO_MODE=true
@@ -152,9 +136,10 @@ Open the Render URL and test:
 - `/admin/settings`
 - `/examiner/login`
 - `/examiner/dashboard`
-- Student registration with `TEST-DEMO` if `CERNIX_DEMO_MODE=true`
+- Student registration with a private demo payment reference if `CERNIX_DEMO_MODE=true`
 - Admin/Super Admin cannot log into the Examiner portal
 - Examiner cannot log into the Admin portal
+- `/admin/intelligence` shows either a Python-enhanced report or a live Laravel summary
 
 ## 10. Security Notes
 
@@ -162,3 +147,4 @@ Open the Render URL and test:
 - Do not commit `.env`.
 - Keep Remita and crypto keys in Render environment variables.
 - Keep `CERNIX_DEMO_MODE=false` for real production.
+- Do not publish demo credentials, payment references, QR internals, or environment secrets in public documentation.

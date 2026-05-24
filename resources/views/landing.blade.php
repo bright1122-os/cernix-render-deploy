@@ -401,7 +401,7 @@ ol.steps li b{display:block;font-family:'Inter',sans-serif;font-weight:600;font-
       A cryptographic key<br/>
       to the exam hall.
     </h1>
-    <p class="by">A short book on signed QR tokens, exam-hall verification, and the small piece of mathematics that replaces a paper roster.</p>
+    <p class="by">A short book on QR exam passes, exam-hall verification, and the workflow that replaces a paper roster.</p>
     <div class="meta">
       <div><b>2025/2026</b>Class</div>
       <div><b>Computer Science</b>Department</div>
@@ -434,9 +434,9 @@ ol.steps li b{display:block;font-family:'Inter',sans-serif;font-weight:600;font-
   <!-- CHAPTER 2 — SOLUTION -->
   <section class="chapter" id="ch2" data-ch="02">
     <div class="chap-num">Chapter Two — The Solution</div>
-    <h1 class="title serif">One signed token. <em>One clean tap.</em></h1>
-    <p class="body lede dropcap">Each registered student receives a single QR pass. It is not a barcode and not a serial number — it is an encrypted, signed token. Inside it: matric number, session, a random nonce, and a timestamp.</p>
-    <p class="body">The student saves this token to their lock screen. At the hall door, the examiner scans it. The signature is verified locally; the decision is logged centrally. Green flash, doors open. The whole interaction takes about a second.</p>
+    <h1 class="title serif">One verified pass. <em>One clean tap.</em></h1>
+    <p class="body lede dropcap">Each registered student receives a single QR exam pass after identity, session, and payment state checks. It is not a paper slip or a serial number; it is a server-verifiable pass tied to one student and one exam context.</p>
+    <p class="body">At the hall door, the examiner scans the pass. The server checks the token state and records the decision centrally. Green means admit, red means deny, and amber means the pass has already been used.</p>
 
     <div class="pull serif">
       "We did not invent a new cipher. We applied a familiar one — carefully — to a problem the campus already had."
@@ -448,17 +448,15 @@ ol.steps li b{display:block;font-family:'Inter',sans-serif;font-weight:600;font-
   <section class="chapter" id="ch3" data-ch="03">
     <div class="chap-num">Chapter Three — The Cryptography</div>
     <h1 class="title serif">Forging a pass means <em>breaking AES.</em></h1>
-    <p class="body lede dropcap">Every token is encrypted with AES-256-GCM and signed with a per-session HMAC-SHA256 secret. The server holds the keys. Examiner devices only verify — they never sign. This means an attacker cannot generate a new token, even with full access to a scanner.</p>
+    <p class="body lede dropcap">Every QR pass is protected by the Laravel application and verified server-side before admission. Examiners can scan and view decisions, but they do not generate passes or control the token lifecycle.</p>
 
     <div class="code">
-<span class="com">// Token generation, on registration</span>
-<span class="key">const</span> payload    = { matric, session_id, nonce, ts };
-<span class="key">const</span> ciphertext = aesGcm(payload, <span class="str">SESSION_KEY</span>);
-<span class="key">const</span> signature  = hmac(ciphertext, <span class="str">HMAC_SECRET</span>);
-<span class="key">const</span> token      = base64url(ciphertext + signature);
-
-<span class="com">// → encoded as a QR. Single-use, ~280ms verify.</span>
-<span class="ok">✓ valid</span>
+<span class="com">// Verification summary</span>
+<span class="key">1.</span> Confirm student and exam context.
+<span class="key">2.</span> Confirm payment/clearance state.
+<span class="key">3.</span> Check one-time QR token status.
+<span class="key">4.</span> Record approved, rejected, or duplicate decision.
+<span class="ok">server verified</span>
     </div>
 
     <p class="body">Once a token is approved at the door, its identifier is written into a one-time-use ledger. A second scan — from a screenshot, a sibling, anyone — surfaces an amber warning instead of a green flash.</p>
@@ -467,13 +465,13 @@ ol.steps li b{display:block;font-family:'Inter',sans-serif;font-weight:600;font-
   <!-- CHAPTER 4 — FLOW -->
   <section class="chapter" id="ch4" data-ch="04">
     <div class="chap-num">Chapter Four — The Flow</div>
-    <h1 class="title serif">From matric number to <em>verified entry.</em></h1>
+    <h1 class="title serif">From generated matric to <em>verified entry.</em></h1>
     <p class="body lede">Four steps. The student does two of them. The examiner does one. The system handles the rest, silently, in the background.</p>
 
     <ol class="steps">
-      <li><div><b>Register</b>The student enters their matric number and Remita RRR. Cernix matches the record and verifies payment in real time.</div></li>
-      <li><div><b>Receive QR</b>An encrypted, signed token is generated and saved to the student's lock screen. There is nothing to print.</div></li>
-      <li><div><b>Scan at the door</b>The examiner taps "Scan." A camera reticle locks on. The signature is verified locally in under a second.</div></li>
+      <li><div><b>Register</b>The student selects faculty, department, level, and student number. Cernix generates the matric number and checks the required payment state.</div></li>
+      <li><div><b>Receive QR</b>A protected QR exam pass is generated for the verified student and session.</div></li>
+      <li><div><b>Scan at the door</b>The examiner starts the scanner. The server verifies the pass and returns the admission decision.</div></li>
       <li><div><b>Admit</b>Green for admitted, red for rejected, amber for already used. Each decision is timestamped and audit-logged.</div></li>
     </ol>
   </section>
@@ -487,12 +485,12 @@ ol.steps li b{display:block;font-family:'Inter',sans-serif;font-weight:600;font-
     <figure class="plate">
       <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=1200&q=80" alt="A QR code being scanned with a phone"/>
       <figcaption class="cap">
-        <span><em>A scanner reading a Cernix token at the door of Block B.</em></span>
+        <span><em>A scanner reading a Cernix exam pass at the door.</em></span>
         <span class="fig">Fig. 02</span>
       </figcaption>
     </figure>
 
-    <p class="body">Behind the colour flash, every scan is written to an audit log: which token, which examiner, which device, which hall, at what time. By the end of an exam, the admin can reconstruct the entire admission sequence — student by student, second by second.</p>
+    <p class="body">Behind the colour flash, each scan is written to an audit log with operational context for review. Admins can inspect scan outcomes, student records, payments, notes, and risk intelligence from the Admin portal.</p>
   </section>
 
   <!-- CHAPTER 6 — ROLES -->
@@ -504,7 +502,7 @@ ol.steps li b{display:block;font-family:'Inter',sans-serif;font-weight:600;font-
     <div class="roles">
       <div>
         <span class="lbl">Student</span>
-        <div class="desc"><b>Register, save, walk in.</b>The portal exists to do one job — give the student a token. Once received, there is nothing else to learn.</div>
+        <div class="desc"><b>Register, save, walk in.</b>The portal guides the student through registration and shows the QR exam pass after validation.</div>
       </div>
       <div>
         <span class="lbl">Examiner</span>
@@ -512,7 +510,7 @@ ol.steps li b{display:block;font-family:'Inter',sans-serif;font-weight:600;font-
       </div>
       <div>
         <span class="lbl">Admin</span>
-        <div class="desc"><b>Oversee the whole hall.</b>A live verification stream, a tamper-evident audit log, and the controls to start, pause, or close a session.</div>
+        <div class="desc"><b>Oversee the system.</b>Admins review students, payments, scans, audit activity, settings, notes, and intelligence summaries.</div>
       </div>
     </div>
   </section>
@@ -534,10 +532,10 @@ ol.steps li b{display:block;font-family:'Inter',sans-serif;font-weight:600;font-
     <div class="stat-row">
       <div><b>1,247</b><span>Students enrolled</span></div>
       <div><b>98.4%</b><span>First-scan rate</span></div>
-      <div><b>~280ms</b><span>Median verify</span></div>
+      <div><b>Server</b><span>Verified decisions</span></div>
     </div>
 
-    <p class="body">No forged token was admitted across the deployment. Three duplicate-scan attempts were caught — all from screenshots shared between students. The audit log surfaced each within seconds.</p>
+    <p class="body">The prototype records approved, rejected, and duplicate scan decisions so administrators can review access activity after each exam session.</p>
   </section>
 
   <!-- CHAPTER 8 — ACKNOWLEDGMENTS -->
@@ -569,7 +567,7 @@ ol.steps li b{display:block;font-family:'Inter',sans-serif;font-weight:600;font-
   <section class="chapter end" id="ch9" data-ch="09">
     <div class="pre">— End of Book —</div>
     <h2>The hall doors are open.</h2>
-    <p>Step into the working prototype — register a student, generate a token, scan at the door, and watch the audit log update in real time.</p>
+    <p>Step into the working prototype — register a student, generate a QR exam pass, scan at the door, and review the admin activity log.</p>
     <div class="btns">
       <a href="/student/register" class="btn btn-dark">Open Prototype →</a>
       <a href="#top" class="btn btn-out">Back to start</a>

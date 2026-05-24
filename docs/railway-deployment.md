@@ -1,6 +1,6 @@
-# Railway Deployment
+# Railway Deployment (Legacy)
 
-This guide prepares CERNIX for a Railway deployment backed by PostgreSQL.
+Railway was evaluated during deployment preparation, but the current recommended deployment target is Render with Docker. Keep this file only as historical reference for teams that still want to adapt the app to Railway.
 
 ## 1. Push To GitHub
 
@@ -24,40 +24,7 @@ Add a PostgreSQL service in the same Railway project. Railway exposes the databa
 
 ## 4. Required Variables
 
-Set these variables on the Laravel service:
-
-```env
-APP_NAME=CERNIX
-APP_ENV=production
-APP_KEY=
-APP_DEBUG=false
-APP_URL=
-
-LOG_CHANNEL=stderr
-LOG_LEVEL=info
-
-DB_CONNECTION=pgsql
-DB_URL=${{Postgres.DATABASE_URL}}
-
-CACHE_STORE=database
-SESSION_DRIVER=database
-QUEUE_CONNECTION=database
-FILESYSTEM_DISK=public
-
-CERNIX_DEMO_MODE=false
-
-REMITA_MERCHANT_ID=
-REMITA_API_KEY=
-REMITA_SERVICE_TYPE_ID=
-REMITA_BASE_URL=
-REMITA_PUBLIC_KEY=
-REMITA_SECRET_KEY=
-
-CERNIX_HMAC_KEY=
-CERNIX_ENCRYPTION_KEY=
-APP_JWT_SECRET=
-JWT_SECRET=
-```
+Set the same production variables documented in `docs/render-deployment.md`, using Railway's PostgreSQL URL for the database connection. Store actual application, database, Remita, and cryptographic values in Railway only.
 
 Generate the Laravel app key locally:
 
@@ -75,13 +42,13 @@ Production deploys should normally keep:
 CERNIX_DEMO_MODE=false
 ```
 
-For a public demo where TEST- RRR values should work, set:
+For a public demo where demo payment references should work, set:
 
 ```env
 CERNIX_DEMO_MODE=true
 ```
 
-TEST- values remain demo-only. With `APP_ENV=production` and `CERNIX_DEMO_MODE=false`, TEST- registration values are rejected.
+Demo payment references remain demo-only. With `APP_ENV=production` and `CERNIX_DEMO_MODE=false`, demo registration shortcuts are rejected.
 
 ## 6. Public Domain
 
@@ -124,7 +91,7 @@ After Railway finishes deploying, open the public HTTPS URL and test:
 - `/admin/settings`
 - `/examiner/login`
 - `/examiner/dashboard`
-- Student registration with `TEST-DEMO` if `CERNIX_DEMO_MODE=true`
+- Student registration with a private demo payment reference if `CERNIX_DEMO_MODE=true`
 - QR generation from the student dashboard
 - Examiner scanner page renders
 - Admin/Super Admin cannot enter the Examiner portal
