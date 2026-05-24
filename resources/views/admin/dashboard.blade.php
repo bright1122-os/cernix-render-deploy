@@ -27,9 +27,10 @@
         ['label' => 'Verification Logs', 'route' => route('admin.scan-logs')],
         ['label' => 'Examiners', 'route' => route('admin.examiners')],
     ];
-    $intelExists = $intelligenceReport['exists'] ?? false;
+    $intelSource = $intelligenceReport['source_label'] ?? 'Live Laravel summary';
     $intelHighRisk = $intelligenceReport['high_risk_count'] ?? 0;
-    $intelGeneratedAt = $intelligenceReport['generated_at'] ?? null;
+    $intelTotalScans = $intelligenceReport['total_scans'] ?? 0;
+    $intelDuplicate = $intelligenceReport['duplicate_count'] ?? 0;
 @endphp
 
 <style>
@@ -92,14 +93,14 @@
     <div class="dash-panel-body">
         <div class="dash-row">
             <div>
-                <b>{{ $intelExists ? ($intelligenceReport['status'] ?? 'Available') : 'Report not generated' }}</b>
+                <b>{{ $intelSource }}</b>
                 <span>
-                    {{ $intelExists
-                        ? 'Latest report generated ' . ($intelGeneratedAt ?: 'at an unknown time') . '.'
-                        : 'Run the export and analyzer commands to generate admin risk insights.' }}
+                    {{ ($intelligenceReport['source'] ?? 'live') === 'python'
+                        ? 'Python report loaded with current risk summary.'
+                        : 'Live summary available. Python-enhanced report not generated yet.' }}
                 </span>
             </div>
-            <strong class="mono">{{ number_format($intelHighRisk) }} high risk</strong>
+            <strong class="mono">{{ number_format($intelTotalScans) }} scans / {{ number_format($intelDuplicate) }} duplicate / {{ number_format($intelHighRisk) }} high risk</strong>
         </div>
     </div>
 </section>

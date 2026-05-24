@@ -31,6 +31,7 @@ const protectedExaminerRoutes = [
 const protectedAdminRoutes = [
   '/admin/dashboard',
   '/admin/settings',
+  '/admin/intelligence',
   '/admin/students',
   '/admin/examiners',
   '/admin/payments',
@@ -356,6 +357,23 @@ test.describe('CERNIX aggressive QA suite', () => {
     expect(text).toMatch(/super admin|settings|control|roles|users|dashboard|CERNIX/i);
   });
 
+  test('10b admin intelligence page shows metrics and hides sensitive internals', async ({ page }) => {
+    await login(page, 'admin');
+    await page.goto(`${BASE}/admin/intelligence`, { waitUntil: 'domcontentloaded' });
+
+    const text = await checkNoCrashText(page, 'admin intelligence');
+    console.log(text.slice(0, 1800));
+
+    await screenshot(page, 'admin-intelligence');
+
+    expect(text).toMatch(/Risk Intelligence|Total Scans|Approved|Rejected|Duplicate/i);
+    expect(text).toMatch(/Live Laravel summary|Python report/i);
+
+    for (const secret of ['encrypted_payload', 'hmac_signature', 'aes_key', 'hmac_secret', 'APP_KEY', 'REMITA_SECRET_KEY']) {
+      expect(text).not.toContain(secret);
+    }
+  });
+
   test('11 examiner login works', async ({ page }) => {
     await login(page, 'examiner');
 
@@ -400,6 +418,18 @@ test.describe('CERNIX aggressive QA suite', () => {
     await screenshot(page, 'examiner-blocked-from-admin');
 
     expect(text).toMatch(/not permitted|not allowed|unauthorized|invalid|admin portal|login/i);
+  });
+
+  test('13b examiner cannot open admin intelligence page', async ({ page }) => {
+    await login(page, 'examiner');
+    await page.goto(`${BASE}/admin/intelligence`, { waitUntil: 'domcontentloaded' });
+
+    const text = await checkNoCrashText(page, 'examiner blocked admin intelligence');
+    console.log('URL:', page.url());
+    console.log(text.slice(0, 1200));
+
+    expect(text).toMatch(/Admin Login|admin access|required|not permitted|login/i);
+    expect(text).not.toMatch(/Risk Intelligence\s+Python-assisted/i);
   });
 
   test('14 protected student pages redirect when not logged in', async ({ page }) => {

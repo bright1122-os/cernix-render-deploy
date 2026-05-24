@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Services\AuditService;
+use App\Services\RiskIntelligenceService;
 use App\Support\DepartmentFees;
 use App\Support\Roles;
 use Illuminate\Http\RedirectResponse;
@@ -33,9 +34,7 @@ class AdminWebController extends Controller
         }
 
         return view('admin.intelligence.index', [
-            'report' => $this->loadRiskReport(),
-            'jsonPath' => 'storage/app/risk-analysis/risk_report.json',
-            'htmlPath' => 'storage/app/risk-analysis/risk_report.html',
+            'intelligence' => app(RiskIntelligenceService::class)->viewModel(),
         ]);
     }
 
@@ -922,62 +921,9 @@ class AdminWebController extends Controller
         $permissions = $this->permissionSummary($request);
         $currentRole = $request->session()->get('examiner_role', 'admin');
 
-        $intelligenceReport = $this->loadRiskReport();
+        $intelligenceReport = app(RiskIntelligenceService::class)->dashboardSummary();
 
         return compact('activeSession', 'metrics', 'riskMetrics', 'todaysExams', 'recentLogs', 'recentActivity', 'readiness', 'alerts', 'permissions', 'currentRole', 'intelligenceReport');
-    }
-
-    private function loadRiskReport(): array
-    {
-        $jsonPath = storage_path('app/risk-analysis/risk_report.json');
-        $htmlPath = storage_path('app/risk-analysis/risk_report.html');
-
-        if (! file_exists($jsonPath)) {
-            return [
-                'exists' => false,
-                'path' => $jsonPath,
-                'html_exists' => file_exists($htmlPath),
-                'html_path' => $htmlPath,
-                'data' => [],
-                'generated_at' => null,
-                'high_risk_count' => 0,
-                'status' => 'Not generated',
-                'error' => null,
-            ];
-        }
-
-        $decoded = json_decode((string) file_get_contents($jsonPath), true);
-
-        if (! is_array($decoded)) {
-            return [
-                'exists' => false,
-                'path' => $jsonPath,
-                'html_exists' => file_exists($htmlPath),
-                'html_path' => $htmlPath,
-                'data' => [],
-                'generated_at' => null,
-                'high_risk_count' => 0,
-                'status' => 'Unreadable',
-                'error' => 'Risk report JSON could not be parsed.',
-            ];
-        }
-
-        $students = collect($decoded['high_risk_students'] ?? []);
-        $highRiskCount = $students
-            ->filter(fn ($student) => strtolower((string) ($student['risk_level'] ?? '')) === 'high')
-            ->count();
-
-        return [
-            'exists' => true,
-            'path' => $jsonPath,
-            'html_exists' => file_exists($htmlPath),
-            'html_path' => $htmlPath,
-            'data' => $decoded,
-            'generated_at' => $decoded['generated_at'] ?? data_get($decoded, 'summary.generated_at'),
-            'high_risk_count' => $highRiskCount,
-            'status' => $highRiskCount > 0 ? 'Review needed' : 'Available',
-            'error' => null,
-        ];
     }
 
     private function verificationLogQuery(Request $request)
