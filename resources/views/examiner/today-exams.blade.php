@@ -30,7 +30,7 @@
                         <tr>
                             <td data-label="Course"><strong>{{ $exam->course_code }}</strong></td>
                             <td data-label="Title" class="safe">{{ $exam->course_title }}</td>
-                            <td data-label="Department">{{ $exam->dept_name ?? 'N/A' }}</td>
+                            <td data-label="Department">{{ $exam->dept_name ?? 'Not available' }}</td>
                             <td data-label="Level">{{ $exam->level }}</td>
                             <td data-label="Time">{{ substr((string) $exam->start_time, 0, 5) }}{{ $exam->end_time ? ' - ' . substr((string) $exam->end_time, 0, 5) : '' }}</td>
                             <td data-label="Venue">{{ $exam->venue }}</td>

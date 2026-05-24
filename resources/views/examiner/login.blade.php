@@ -57,7 +57,7 @@
             </div>
             <div>
                 <b>{{ $isAdminLogin ? 'Admin Control Center' : 'Examiner Portal' }}</b>
-                <span>{{ $isAdminLogin ? 'Admin sessions use existing CERNIX examiner/admin accounts' : 'Sessions expire after 4 hours · All scans are logged' }}</span>
+                <span>{{ $isAdminLogin ? 'Admin and Super Admin accounts use the control-center portal only' : 'Examiner-only sessions expire after 4 hours · All scans are logged' }}</span>
             </div>
         </div>
 
@@ -71,7 +71,7 @@
         <form id="login-form" novalidate>
             <div class="field mono">
                 <label for="username">Username</label>
-                <input id="username" type="text" class="input" placeholder="{{ $isAdminLogin ? 'admin1' : 'examiner1' }}" autocomplete="username" required>
+                <input id="username" type="text" class="input" placeholder="Username" autocomplete="username" required>
             </div>
 
             <div class="field">

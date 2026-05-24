@@ -100,6 +100,8 @@ class RiskIntelligenceService
                 'rejected_attempts' => (int) ($summarySource['rejected_count'] ?? 0),
             ],
             'risk_distribution' => $data['risk_distribution'] ?? $data['risk_summary'] ?? ['low' => 0, 'medium' => 0, 'high' => $highRiskStudents],
+            'department_trends' => $this->trendRows($data['department_trends'] ?? []),
+            'level_trends' => $this->trendRows($data['level_trends'] ?? []),
             'key_observations' => $this->nonEmptyList($data['key_observations'] ?? data_get($data, 'daily_summary.key_observations') ?? []),
             'high_risk_students' => $students,
             'suspicious_examiners' => $examiners,
@@ -115,6 +117,8 @@ class RiskIntelligenceService
         $students = $this->fallbackStudentRisk();
         $examiners = $this->fallbackExaminerRisk();
         [$devices, $ips] = $this->fallbackDeviceIpRisk();
+        $departmentTrends = $this->fallbackTrends('department');
+        $levelTrends = $this->fallbackTrends('level');
         $observations = $this->fallbackObservations($summary, $students, $examiners, $devices, $ips);
         $recommendations = $this->fallbackRecommendations($summary, $students, $examiners, $devices, $ips);
 
@@ -142,6 +146,8 @@ class RiskIntelligenceService
                 'medium' => collect($students)->where('risk_level', 'medium')->count(),
                 'high' => collect($students)->where('risk_level', 'high')->count(),
             ],
+            'department_trends' => $departmentTrends,
+            'level_trends' => $levelTrends,
             'key_observations' => $observations,
             'high_risk_students' => $students,
             'suspicious_examiners' => $examiners,
@@ -344,6 +350,49 @@ class RiskIntelligenceService
         ];
     }
 
+    private function fallbackTrends(string $type): array
+    {
+        if (! $this->hasTable('verification_logs') || ! $this->hasTable('qr_tokens') || ! $this->hasTable('students')) {
+            return [];
+        }
+
+        $query = DB::table('verification_logs')
+            ->leftJoin('qr_tokens', 'verification_logs.token_id', '=', 'qr_tokens.token_id')
+            ->leftJoin('students', 'qr_tokens.student_id', '=', 'students.matric_no');
+
+        if ($type === 'department' && $this->hasTable('departments')) {
+            $query->leftJoin('departments', 'students.department_id', '=', 'departments.dept_id');
+            $label = 'departments.dept_name';
+        } else {
+            $label = 'students.level';
+        }
+
+        $rows = $query
+            ->select(DB::raw("COALESCE($label, 'Unknown') as label"), 'verification_logs.decision')
+            ->limit(1000)
+            ->get()
+            ->groupBy('label');
+
+        return $rows->map(function (Collection $logs, string $label) {
+            $total = $logs->count();
+            $approved = $logs->where('decision', 'APPROVED')->count();
+            $rejected = $logs->where('decision', 'REJECTED')->count();
+            $duplicate = $logs->where('decision', 'DUPLICATE')->count();
+
+            return [
+                'label' => $label,
+                'total_scans' => $total,
+                'approved_count' => $approved,
+                'rejected_count' => $rejected,
+                'duplicate_count' => $duplicate,
+                'approval_rate' => $this->rate($approved, $total),
+                'duplicate_rate' => $this->rate($duplicate, $total),
+                'rejection_rate' => $this->rate($rejected, $total),
+                'risk_score' => ($duplicate * 20) + ($rejected * 15),
+            ];
+        })->sortByDesc('risk_score')->values()->all();
+    }
+
     private function identifierRisk(Collection $rows, string $field, string $type): array
     {
         return $rows->filter(fn ($row) => ! empty($row->{$field}))
@@ -505,6 +554,21 @@ class RiskIntelligenceService
             'reasons' => $this->nonEmptyList($row['reasons'] ?? []),
             'recommendation' => (string) ($row['recommendation'] ?? 'Review scanner/device context.'),
         ];
+    }
+
+    private function trendRows(array $rows): array
+    {
+        return collect($rows)->map(fn ($row) => [
+            'label' => (string) (($row['label'] ?? $row['name'] ?? 'Unknown')),
+            'total_scans' => (int) ($row['total_scans'] ?? 0),
+            'approved_count' => (int) ($row['approved_count'] ?? 0),
+            'rejected_count' => (int) ($row['rejected_count'] ?? 0),
+            'duplicate_count' => (int) ($row['duplicate_count'] ?? 0),
+            'approval_rate' => (float) ($row['approval_rate'] ?? 0),
+            'duplicate_rate' => (float) ($row['duplicate_rate'] ?? 0),
+            'rejection_rate' => (float) ($row['rejection_rate'] ?? 0),
+            'risk_score' => (int) ($row['risk_score'] ?? 0),
+        ])->values()->all();
     }
 
     private function nonEmptyList(mixed $value): array

@@ -48,7 +48,7 @@
                 <div>
                     <h1>{{ $student->full_name }}</h1>
                     <p class="muted mono">{{ $student->matric_no }}</p>
-                    <p class="muted">{{ $student->dept_name ?? 'Department unavailable' }} · {{ $student->level ?? 'N/A' }} Level · {{ $student->faculty ?? 'Faculty unavailable' }}</p>
+                    <p class="muted">{{ $student->dept_name ?? 'Department unavailable' }} · {{ $student->level ?? 'Not available' }} Level · {{ $student->faculty ?? 'Faculty unavailable' }}</p>
                 </div>
             </div>
         @else
@@ -77,7 +77,7 @@
                 <div class="scan-row"><span class="scan-label">Timestamp</span><span class="scan-value mono">{{ \Illuminate\Support\Carbon::parse($scan->timestamp)->format('d M Y, H:i') }}</span></div>
                 <div class="scan-row"><span class="scan-label">Examiner</span><span class="scan-value">{{ $scan->examiner_name ?? 'Not available' }}</span></div>
                 <div class="scan-row"><span class="scan-label">Decision</span><span class="scan-value"><span class="ex-badge {{ $decisionClass }}">{{ $scan->decision }}</span></span></div>
-                <div class="scan-row"><span class="scan-label">Device / IP</span><span class="scan-value">{{ $scan->device_fp ?? 'N/A' }} · {{ $scan->ip_address ?? 'N/A' }}</span></div>
+                <div class="scan-row"><span class="scan-label">Device / IP</span><span class="scan-value">{{ $scan->device_fp ?? 'Not available' }} · {{ $scan->ip_address ?? 'Not available' }}</span></div>
             </div>
         </section>
 

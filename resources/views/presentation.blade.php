@@ -566,6 +566,6 @@ server verified</div>
         </div>
     </div>
 
-    <div class="footer-meta">CERNIX v1.0 · Secured by cryptographic primitives</div>
+    <div class="footer-meta">CERNIX v1.0 · Secure exam access and verification</div>
 </div>
 @endsection

@@ -23,7 +23,7 @@
     .hero::after {
         content: ""; position: absolute; right: 28px; bottom: 26px;
         width: 150px; height: 150px; background: url('/aaua-logo.png') center / contain no-repeat;
-        opacity: .11; pointer-events: none;
+        opacity: .18; pointer-events: none;
     }
     .logo-mark {
         display: inline-flex; align-items: center; gap: 10px;
@@ -153,14 +153,14 @@
             </h1>
 
             <p class="tag">
-                End-to-end secure exam hall access control for Adekunle Ajasin University.
-                AES-256-GCM encrypted QR tokens, HMAC-verified identities, one-time admission.
+                Secure exam access for Adekunle Ajasin University, linking student identity,
+                payment status, timetable context, and a server-verifiable QR exam pass.
             </p>
 
             <div class="stat-strip">
-                <div><b>AES-256</b><span>Encryption</span></div>
-                <div><b>HMAC</b><span>Signed</span></div>
-                <div><b>One-time</b><span>Tokens</span></div>
+                <div><b>ID</b><span>Identity</span></div>
+                <div><b>Fee</b><span>Payment</span></div>
+                <div><b>QR</b><span>Exam Pass</span></div>
             </div>
         </div>
     </div>
@@ -175,7 +175,7 @@
             </div>
             <div class="txt">
                 <h3>Student Portal</h3>
-                <p>Register for your exam and get your one-time QR token</p>
+                <p>Register for your exam and open your QR exam pass</p>
             </div>
             <div class="arrow">
                 <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
@@ -209,7 +209,7 @@
             </div>
             <div class="txt">
                 <h3>Documentation</h3>
-                <p>System documentation — verification flow, cryptography, and examiner instructions</p>
+                <p>System documentation — student, examiner, admin, and intelligence workflows</p>
             </div>
             <div class="arrow">
                 <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
@@ -226,7 +226,7 @@
             </div>
             <div class="txt">
                 <h3>Admin Panel</h3>
-                <p>View verification logs, audit trail, and live session statistics</p>
+                <p>Review students, payments, scan logs, audit activity, and risk intelligence</p>
             </div>
             <div class="arrow">
                 <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
@@ -237,13 +237,13 @@
     <div class="system-status" id="system-status" style="opacity:0;transition:opacity .3s">
         <span class="pulse-dot"></span>
         <div class="info">
-            <b id="status-label">Checking system...</b>
+            <b id="status-label">Checking service...</b>
             <span id="status-sub"></span>
         </div>
         <span class="chip emerald" id="status-chip" style="display:none">LIVE</span>
     </div>
 
-    <p class="footer-meta">CERNIX v1.0 · Secured by cryptographic primitives</p>
+    <p class="footer-meta">CERNIX v1.0 · Secure exam access and verification</p>
 </div>
 @endsection
 
@@ -253,7 +253,7 @@ fetch('/health').then(r => r.json()).then(data => {
     const ok = data.status === 'ok' && data.session_active;
     const el = document.getElementById('system-status');
     document.getElementById('status-label').textContent = ok
-        ? 'System operational'
+        ? 'Session active'
         : 'System up - no active session';
     document.getElementById('status-label').style.color = ok ? 'var(--emerald)' : 'var(--amber)';
     document.getElementById('status-sub').textContent = ok

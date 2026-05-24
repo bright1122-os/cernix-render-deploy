@@ -5,7 +5,7 @@
 @section('content')
 <style>
     .home-shell { min-height:100vh; background:#f7f6f1; color:var(--ink); overflow-x:hidden; display:flex; flex-direction:column; }
-    .grid-bg { position:fixed; inset:0; pointer-events:none; opacity:.58; background-image:linear-gradient(rgba(15,32,80,.052) 1px, transparent 1px), linear-gradient(90deg, rgba(15,32,80,.052) 1px, transparent 1px); background-size:36px 36px; mask-image:linear-gradient(to bottom,#000 0 58%,transparent 92%); }
+    .grid-bg { position:fixed; inset:0; pointer-events:none; opacity:.68; background-image:linear-gradient(rgba(15,32,80,.062) 1px, transparent 1px), linear-gradient(90deg, rgba(15,32,80,.062) 1px, transparent 1px); background-size:36px 36px; mask-image:linear-gradient(to bottom,#000 0 58%,transparent 92%); }
     .glow { position:fixed; inset:0 auto auto 22%; width:54vw; height:52vh; border-radius:999px; background:radial-gradient(circle,rgba(45,108,255,.13),transparent 64%); filter:blur(38px); pointer-events:none; }
     .home-main { position:relative; z-index:1; width:min(1160px,100%); margin:0 auto; padding:clamp(76px,9vw,128px) clamp(18px,5vw,58px) 34px; flex:1; display:grid; gap:clamp(36px,5vw,62px); align-items:center; }
     .hero { animation:homeRise .45s ease both; }
@@ -81,12 +81,12 @@
             </div>
             <div class="tag"><span class="pulse-dot"></span> Secure Exam Access</div>
             <h1><span class="accent">Cryptographic</span> Exam Access.</h1>
-            <p>End-to-end secure exam hall access control for Adekunle Ajasin University. AES-256-GCM encrypted QR tokens, HMAC-verified identities, one-time admission.</p>
+            <p>Secure exam access for Adekunle Ajasin University, linking student identity, payment status, timetable context, and a server-verifiable QR exam pass.</p>
 
             <div class="stat-strip" aria-label="Security summary">
-                <div><b>AES-256</b><span>Encryption</span></div>
-                <div><b>HMAC</b><span>Signed</span></div>
-                <div><b>One-time</b><span>Tokens</span></div>
+                <div><b>ID</b><span>Identity</span></div>
+                <div><b>Fee</b><span>Payment</span></div>
+                <div><b>QR</b><span>Exam Pass</span></div>
             </div>
         </div>
 
@@ -94,7 +94,7 @@
             <div class="portals">
                 <a class="portal" href="/student/register">
                     <span class="portal-icon">S</span>
-                    <div><b>Student Portal</b><span>Register for your exam and get your one-time QR token.</span></div>
+                    <div><b>Student Portal</b><span>Register for your exam and open your QR exam pass.</span></div>
                 </a>
                 <a class="portal secondary" href="/examiner/login">
                     <span class="portal-icon">E</span>
@@ -106,7 +106,7 @@
                 </a>
                 <a class="portal docs" href="/documentation">
                     <span class="portal-icon">D</span>
-                    <div><b>Documentation</b><span>System documentation, verification flow, cryptography, and instructions.</span></div>
+                    <div><b>Documentation</b><span>Student, examiner, admin, and intelligence workflows.</span></div>
                 </a>
             </div>
         </aside>
@@ -135,7 +135,7 @@ fetch('/health').then(r => r.json()).then(data => {
     const ok = data.status === 'ok' && data.session_active;
     const el = document.getElementById('system-status');
     const meta = document.getElementById('status-mini');
-    document.getElementById('status-label').textContent = ok ? 'System operational' : 'System up — no active session';
+    document.getElementById('status-label').textContent = ok ? 'Session active' : 'System up — no active session';
     document.getElementById('status-label').style.color = ok ? 'var(--emerald)' : 'var(--amber)';
     document.getElementById('status-sub').textContent = ok ? 'Active exam session running' : 'No exam session is currently active';
     meta.innerHTML = '';

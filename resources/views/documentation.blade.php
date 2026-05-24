@@ -940,7 +940,7 @@
         {{-- ── CTA ──────────────────────────────────────────── --}}
         <div style="text-align:center; padding: 20px 0">
             <p style="font-size:14px;color:var(--ink-3);margin-bottom:20px">
-                Explore the working prototype — register a student, generate a QR exam pass,
+                Explore the working system — register a student, generate a QR exam pass,
                 and verify it at the examiner dashboard.
             </p>
             <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">

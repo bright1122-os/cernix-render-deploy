@@ -55,10 +55,10 @@
                             <td class="safe"><strong>{{ $student->full_name }}</strong></td>
                             <td class="mono">{{ $student->matric_no }}</td>
                             <td>{{ $student->dept_name ?? 'Not available' }}</td>
-                            <td>{{ $student->level ?? 'N/A' }}</td>
+                            <td>{{ $student->level ?? 'Not available' }}</td>
                             <td><span class="admin-status {{ $student->verified_at ? 'green' : 'amber' }}">{{ $student->verified_at ? 'Verified' : 'Pending' }}</span></td>
                             <td><span class="admin-status {{ ($student->token_status ?? '') === 'UNUSED' ? 'green' : 'amber' }}">{{ $student->token_status ?? 'Missing' }}</span></td>
-                            <td class="mono">{{ $student->created_at ? \Carbon\Carbon::parse($student->created_at)->format('M d, Y') : 'N/A' }}</td>
+                            <td class="mono">{{ $student->created_at ? \Carbon\Carbon::parse($student->created_at)->format('M d, Y') : 'Not available' }}</td>
                             <td><a class="admin-action ghost" href="{{ route('admin.students.show', ['student' => $student->matric_no]) }}">View</a></td>
                         </tr>
                     @empty

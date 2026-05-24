@@ -578,7 +578,7 @@ class ExaminerWebController extends Controller
                 'student' => $row->full_name ?? 'Student unavailable',
                 'matric_no' => $row->matric_no ?? 'Unavailable',
                 'department' => $row->dept_name ?? 'Unavailable',
-                'level' => $row->level ?? 'N/A',
+                'level' => $row->level ?? 'Not available',
                 'total_scans' => (int) $row->total_scans,
                 'approved' => (int) $row->approved_count,
                 'rejected' => (int) $row->rejected_count,

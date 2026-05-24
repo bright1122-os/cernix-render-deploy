@@ -871,6 +871,9 @@ class AdminWebController extends Controller
             'duplicate' => (int) ($scanCounts['DUPLICATE'] ?? 0),
             'today_exams' => $todaysExams->count(),
             'examiners' => $this->safeCount('examiners'),
+            'examiner_users' => Schema::hasTable('examiners') ? DB::table('examiners')->where('role', 'examiner')->count() : 0,
+            'admin_users' => Schema::hasTable('examiners') ? DB::table('examiners')->whereIn('role', ['admin', 'super_admin'])->count() : 0,
+            'departments' => $this->safeCount('departments'),
         ];
 
         $riskMetrics = [

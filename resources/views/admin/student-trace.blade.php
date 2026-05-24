@@ -22,7 +22,7 @@
     <div class="admin-section-head"><h2>Matches</h2><span>{{ $results->count() }} shown</span></div>
     <div class="admin-section-body"><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Name</th><th>Matric</th><th>Department</th><th>Level</th><th>RRR</th><th>QR</th><th>Action</th></tr></thead><tbody>
         @foreach($results as $row)
-            <tr><td>{{ $row->full_name }}</td><td class="mono">{{ $row->matric_no }}</td><td>{{ $row->dept_name ?? 'N/A' }}</td><td>{{ $row->level }}</td><td class="mono">{{ $row->rrr_number ?? 'N/A' }}</td><td>{{ $row->token_status ?? 'Missing' }}</td><td><a class="admin-action ghost" href="{{ route('admin.student-trace', ['q' => $queryText, 'student' => $row->matric_no]) }}">Trace</a></td></tr>
+            <tr><td>{{ $row->full_name }}</td><td class="mono">{{ $row->matric_no }}</td><td>{{ $row->dept_name ?? 'Not available' }}</td><td>{{ $row->level }}</td><td class="mono">{{ $row->rrr_number ?? 'Not available' }}</td><td>{{ $row->token_status ?? 'Missing' }}</td><td><a class="admin-action ghost" href="{{ route('admin.student-trace', ['q' => $queryText, 'student' => $row->matric_no]) }}">Trace</a></td></tr>
         @endforeach
     </tbody></table></div></div>
 </section>

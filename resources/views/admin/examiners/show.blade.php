@@ -29,7 +29,7 @@
         <div class="admin-section-head"><h2>Examiner Profile</h2><span class="admin-status {{ $examiner->is_active ? 'green' : 'amber' }}">{{ $examiner->is_active ? 'Active' : 'Inactive' }}</span></div>
         <div class="admin-section-body">
             <div class="admin-info-list">
-                <div class="admin-info-row"><span class="admin-label">Created</span><span class="admin-value">{{ $examiner->created_at ?? 'N/A' }}</span></div>
+                <div class="admin-info-row"><span class="admin-label">Created</span><span class="admin-value">{{ $examiner->created_at ?? 'Not available' }}</span></div>
                 <div class="admin-info-row"><span class="admin-label">Last Active</span><span class="admin-value">{{ $examiner->last_active_at ?? 'Not tracked in this schema' }}</span></div>
                 <div class="admin-info-row"><span class="admin-label">Last Scan</span><span class="admin-value">{{ $examiner->last_scan_at ?? 'No scans yet' }}</span></div>
             </div>
@@ -56,7 +56,7 @@
                 <thead><tr><th>Time</th><th>Decision</th><th>Student</th><th>Matric</th><th>Token</th><th>Device/IP</th><th>Action</th></tr></thead>
                 <tbody>
                     @forelse($history as $row)
-                        <tr><td class="mono">{{ $row->timestamp }}</td><td><span class="admin-status {{ $row->decision === 'APPROVED' ? 'green' : ($row->decision === 'DUPLICATE' ? 'amber' : 'red') }}">{{ $row->decision }}</span></td><td>{{ $row->student_name ?? 'Unavailable' }}</td><td class="mono">{{ $row->matric_no ?? 'N/A' }}</td><td class="mono safe">{{ Str::limit($row->token_id, 18) }}</td><td class="safe">{{ $row->device_fp }} · {{ $row->ip_address }}</td><td><a class="admin-action ghost" href="{{ route('admin.scan-logs.show', $row->log_id) }}">View</a></td></tr>
+                        <tr><td class="mono">{{ $row->timestamp }}</td><td><span class="admin-status {{ $row->decision === 'APPROVED' ? 'green' : ($row->decision === 'DUPLICATE' ? 'amber' : 'red') }}">{{ $row->decision }}</span></td><td>{{ $row->student_name ?? 'Unavailable' }}</td><td class="mono">{{ $row->matric_no ?? 'Not available' }}</td><td class="mono safe">{{ Str::limit($row->token_id, 18) }}</td><td class="safe">{{ $row->device_fp }} · {{ $row->ip_address }}</td><td><a class="admin-action ghost" href="{{ route('admin.scan-logs.show', $row->log_id) }}">View</a></td></tr>
                     @empty
                         <tr><td colspan="7"><div class="admin-empty">No scan history for this examiner.</div></td></tr>
                     @endforelse

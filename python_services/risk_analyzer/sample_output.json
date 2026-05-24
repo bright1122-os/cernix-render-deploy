@@ -1,17 +1,130 @@
 {
-  "generated_at": "2026-05-24T06:01:29.014920+00:00",
-  "total_scans": 8,
-  "approved_count": 1,
-  "rejected_count": 4,
-  "duplicate_count": 3,
-  "approval_rate": 12.5,
-  "duplicate_rate": 37.5,
-  "rejection_rate": 50.0,
+  "generated_at": "2026-05-24T22:34:33.472651+00:00",
+  "source": "python_risk_analyzer",
+  "summary": {
+    "total_scans": 8,
+    "approved_count": 1,
+    "rejected_count": 4,
+    "duplicate_count": 3,
+    "approval_rate": 12.5,
+    "duplicate_rate": 37.5,
+    "rejection_rate": 50.0,
+    "total_students": 5,
+    "verified_payments": 5
+  },
+  "risk_overview": {
+    "high_risk_students_count": 1,
+    "medium_risk_students_count": 1,
+    "suspicious_examiners_count": 1,
+    "suspicious_devices_count": 1,
+    "suspicious_ips_count": 1,
+    "duplicate_attempts": 3,
+    "rejected_attempts": 4
+  },
   "risk_distribution": {
     "low": 0,
     "medium": 3,
     "high": 2
   },
+  "department_trends": [
+    {
+      "label": "Data Science",
+      "total_scans": 3,
+      "approved_count": 0,
+      "rejected_count": 3,
+      "duplicate_count": 0,
+      "approval_rate": 0.0,
+      "duplicate_rate": 0.0,
+      "rejection_rate": 100.0,
+      "risk_score": 45
+    },
+    {
+      "label": "Computer Science",
+      "total_scans": 3,
+      "approved_count": 1,
+      "rejected_count": 0,
+      "duplicate_count": 2,
+      "approval_rate": 33.33,
+      "duplicate_rate": 66.67,
+      "rejection_rate": 0.0,
+      "risk_score": 40
+    },
+    {
+      "label": "Software Engineering",
+      "total_scans": 1,
+      "approved_count": 0,
+      "rejected_count": 0,
+      "duplicate_count": 1,
+      "approval_rate": 0.0,
+      "duplicate_rate": 100.0,
+      "rejection_rate": 0.0,
+      "risk_score": 20
+    },
+    {
+      "label": "Cyber Security",
+      "total_scans": 1,
+      "approved_count": 0,
+      "rejected_count": 1,
+      "duplicate_count": 0,
+      "approval_rate": 0.0,
+      "duplicate_rate": 0.0,
+      "rejection_rate": 100.0,
+      "risk_score": 15
+    }
+  ],
+  "level_trends": [
+    {
+      "label": "300",
+      "total_scans": 4,
+      "approved_count": 0,
+      "rejected_count": 4,
+      "duplicate_count": 0,
+      "approval_rate": 0.0,
+      "duplicate_rate": 0.0,
+      "rejection_rate": 100.0,
+      "risk_score": 60
+    },
+    {
+      "label": "400",
+      "total_scans": 2,
+      "approved_count": 1,
+      "rejected_count": 0,
+      "duplicate_count": 1,
+      "approval_rate": 50.0,
+      "duplicate_rate": 50.0,
+      "rejection_rate": 0.0,
+      "risk_score": 20
+    },
+    {
+      "label": "100",
+      "total_scans": 1,
+      "approved_count": 0,
+      "rejected_count": 0,
+      "duplicate_count": 1,
+      "approval_rate": 0.0,
+      "duplicate_rate": 100.0,
+      "rejection_rate": 0.0,
+      "risk_score": 20
+    },
+    {
+      "label": "200",
+      "total_scans": 1,
+      "approved_count": 0,
+      "rejected_count": 0,
+      "duplicate_count": 1,
+      "approval_rate": 0.0,
+      "duplicate_rate": 100.0,
+      "rejection_rate": 0.0,
+      "risk_score": 20
+    }
+  ],
+  "key_observations": [
+    "Duplicate attempts were concentrated in Computer Science (2 duplicate scans).",
+    "Device device-shared appeared across 4 students.",
+    "Examiner 3 has a suspicious score of 65.",
+    "2 medium/high risk student record(s) require review.",
+    "IP 10.10.0.50 generated 2 rejected scans."
+  ],
   "high_risk_students": [
     {
       "matric_no": "230408010",
@@ -196,5 +309,14 @@
     "Verify student payment/access records for flagged students.",
     "Review examiner activity logs and scanner-device assignment.",
     "Check repeated device/IP patterns for shared-device or proxy behavior."
-  ]
+  ],
+  "total_scans": 8,
+  "approved_count": 1,
+  "rejected_count": 4,
+  "duplicate_count": 3,
+  "approval_rate": 12.5,
+  "duplicate_rate": 37.5,
+  "rejection_rate": 50.0,
+  "total_students": 5,
+  "verified_payments": 5
 }

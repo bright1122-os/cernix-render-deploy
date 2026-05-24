@@ -41,7 +41,7 @@
             <div>
                 <h1>{{ $student->full_name }}</h1>
                 <p class="muted mono">{{ $student->matric_no }}</p>
-                <p class="muted">{{ $student->dept_name ?? 'Department unavailable' }} · {{ $student->level ?? 'N/A' }} Level</p>
+                <p class="muted">{{ $student->dept_name ?? 'Department unavailable' }} · {{ $student->level ?? 'Not available' }} Level</p>
             </div>
         </div>
         <span class="chip {{ $decisionClass }}">{{ $scan->decision }}</span>
@@ -62,7 +62,7 @@
                 <div class="access-row"><span class="access-label">Timestamp</span><span class="access-value mono">{{ $scan->timestamp }}</span></div>
                 <div class="access-row"><span class="access-label">Examiner</span><span class="access-value">{{ $scan->examiner_name ?? $scan->examiner_username ?? 'Not available' }}</span></div>
                 <div class="access-row"><span class="access-label">QR Status</span><span class="access-value">{{ $scan->token_status ?? 'Not available' }}</span></div>
-                <div class="access-row"><span class="access-label">Device / IP</span><span class="access-value">{{ $scan->device_fp ?? 'N/A' }} · {{ $scan->ip_address ?? 'N/A' }}</span></div>
+                <div class="access-row"><span class="access-label">Device / IP</span><span class="access-value">{{ $scan->device_fp ?? 'Not available' }} · {{ $scan->ip_address ?? 'Not available' }}</span></div>
             </div>
         </section>
 

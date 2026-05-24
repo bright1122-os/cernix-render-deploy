@@ -22,7 +22,7 @@ It does not handle authentication, payment verification, QR generation, QR scann
 - `rules.py` - rule-based scoring and anomaly detection
 - `report.py` - JSON/HTML report assembly
 - `utils.py` - safe parsing, masking, and file helpers
-- `sample_input.json` - fake sample scan data
+- `sample_input.json` - synthetic sample scan data
 - `sample_output.json` - generated sample JSON report
 - `sample_report.html` - generated sample HTML report
 
@@ -105,21 +105,20 @@ RRR/payment reference values are masked in reports. Demo-style references keep o
 
 ## Output Format
 
-The JSON report includes:
+The JSON report uses a Laravel-friendly structure:
 
-- `total_scans`
-- `approved_count`
-- `rejected_count`
-- `duplicate_count`
-- `approval_rate`
-- `duplicate_rate`
-- `rejection_rate`
+- `generated_at`
+- `source`
+- `summary`
+- `risk_overview`
 - `risk_distribution`
+- `department_trends`
+- `level_trends`
+- `key_observations`
 - `high_risk_students`
 - `suspicious_examiners`
 - `suspicious_devices`
 - `suspicious_ips`
-- `daily_summary`
 - `recommendations`
 
 The HTML report includes:
@@ -129,9 +128,10 @@ The HTML report includes:
 3. Risk distribution
 4. High-risk students
 5. Suspicious examiners
-6. Suspicious devices/IPs
-7. Recommendations
-8. Generated timestamp
+6. Department and level trends
+7. Suspicious devices/IPs
+8. Recommendations
+9. Generated timestamp
 
 ## Risk Scoring
 
@@ -195,6 +195,8 @@ Current implementation supports Mode 1 and can consume the safe JSON generated b
 php artisan cernix:export-risk-data
 ```
 
+Laravel can also read the generated `storage/app/risk-analysis/risk_report.json` on the Admin Intelligence page. If the Python report is missing, Laravel still shows a live database summary so the web UI remains useful.
+
 ## Security And Privacy
 
-This module is intentionally offline-first and safe for deployment. It does not require external APIs, cloud AI services, database credentials, or production secrets. Use fake/sample data for demos and export only admin-visible operational fields from Laravel.
+This module is intentionally offline-first and safe for deployment. It does not require external APIs, cloud AI services, database credentials, or production secrets. Use synthetic sample data for demos and export only admin-visible operational fields from Laravel.

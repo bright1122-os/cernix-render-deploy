@@ -18,7 +18,7 @@
         </form>
         <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>RRR</th><th>Student</th><th>Matric</th><th>Department</th><th>Amount</th><th>Status</th><th>Verified</th><th>QR</th><th>Action</th></tr></thead><tbody>
             @forelse($payments as $payment)
-                <tr><td class="mono">{{ $payment->rrr_number }}</td><td class="safe">{{ $payment->full_name ?? 'Student unavailable' }}</td><td class="mono">{{ $payment->student_id }}</td><td>{{ $payment->dept_name ?? 'N/A' }} {{ $payment->level ? '- '.$payment->level : '' }}</td><td class="mono">{{ number_format((float) $payment->amount_confirmed, 2) }}</td><td><span class="admin-status green">Verified</span></td><td class="mono">{{ $payment->verified_at }}</td><td>{{ $payment->token_status ?? 'Missing' }}</td><td><a class="admin-action ghost" href="{{ route('admin.payments.show', $payment->rrr_number) }}">View</a></td></tr>
+                <tr><td class="mono">{{ $payment->rrr_number }}</td><td class="safe">{{ $payment->full_name ?? 'Student unavailable' }}</td><td class="mono">{{ $payment->student_id }}</td><td>{{ $payment->dept_name ?? 'Not available' }} {{ $payment->level ? '- '.$payment->level : '' }}</td><td class="mono">{{ number_format((float) $payment->amount_confirmed, 2) }}</td><td><span class="admin-status green">Verified</span></td><td class="mono">{{ $payment->verified_at }}</td><td>{{ $payment->token_status ?? 'Missing' }}</td><td><a class="admin-action ghost" href="{{ route('admin.payments.show', $payment->rrr_number) }}">View</a></td></tr>
             @empty
                 <tr><td colspan="9"><div class="admin-empty">No payment records found.</div></td></tr>
             @endforelse

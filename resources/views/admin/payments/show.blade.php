@@ -25,7 +25,7 @@
             <div class="safe">
                 <h2 style="margin:0">{{ $payment->full_name ?? 'Student unavailable' }}</h2>
                 <p class="mono muted">{{ $payment->student_id }}</p>
-                <p class="muted">{{ $payment->dept_name ?? 'Department unavailable' }} · {{ $payment->level ?? 'N/A' }} Level</p>
+                <p class="muted">{{ $payment->dept_name ?? 'Department unavailable' }} · {{ $payment->level ?? 'Not available' }} Level</p>
             </div>
         </div>
     </section>
@@ -41,7 +41,7 @@
 
 <section class="metric-strip" style="margin-top:16px">
     <div class="metric-cell"><span class="metric-label">QR Status</span><span class="metric-value">{{ $token->status ?? 'Missing' }}</span></div>
-    <div class="metric-cell"><span class="metric-label">Token Ref</span><span class="metric-value" style="font-size:13px">{{ $token ? Str::limit($token->token_id, 18) : 'N/A' }}</span></div>
+    <div class="metric-cell"><span class="metric-label">Token Ref</span><span class="metric-value" style="font-size:13px">{{ $token ? Str::limit($token->token_id, 18) : 'Not available' }}</span></div>
     <div class="metric-cell"><span class="metric-label">Approved</span><span class="metric-value">{{ $scanSummary['APPROVED'] ?? 0 }}</span></div>
     <div class="metric-cell"><span class="metric-label">Duplicate/Rejected</span><span class="metric-value">{{ ($scanSummary['DUPLICATE'] ?? 0) + ($scanSummary['REJECTED'] ?? 0) }}</span></div>
 </section>

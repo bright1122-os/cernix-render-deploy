@@ -11,6 +11,8 @@
     $devices = collect($intelligence['suspicious_devices'] ?? [])->merge($intelligence['suspicious_ips'] ?? []);
     $observations = collect($intelligence['key_observations'] ?? []);
     $recommendations = collect($intelligence['recommendations'] ?? []);
+    $departmentTrends = collect($intelligence['department_trends'] ?? []);
+    $levelTrends = collect($intelligence['level_trends'] ?? []);
     $riskDistribution = $intelligence['risk_distribution'] ?? ['low' => 0, 'medium' => 0, 'high' => 0];
     $isPython = ($intelligence['source'] ?? 'live') === 'python';
 @endphp
@@ -95,6 +97,60 @@
                 <div class="metric-cell"><span class="metric-label">Rejected Attempts</span><b class="metric-value">{{ number_format($overview['rejected_attempts'] ?? 0) }}</b></div>
             </div>
             <p class="muted" style="margin:14px 0 0">Risk distribution: Low {{ $riskDistribution['low'] ?? 0 }}, Medium {{ $riskDistribution['medium'] ?? 0 }}, High {{ $riskDistribution['high'] ?? 0 }}.</p>
+        </div>
+    </section>
+
+    <section class="admin-section intel-table">
+        <div class="admin-section-head"><h2>Department / Level Trends</h2><span>Risk concentration</span></div>
+        <div class="admin-section-body">
+            <div class="admin-grid two">
+                <div>
+                    <h3 style="margin:0 0 10px;font-size:14px">Departments</h3>
+                    @if($departmentTrends->isEmpty())
+                        <div class="admin-empty">No department trend data available yet.</div>
+                    @else
+                        <div class="admin-table-wrap">
+                            <table class="admin-table" style="min-width:520px">
+                                <thead><tr><th>Department</th><th>Scans</th><th>Rejected</th><th>Duplicate</th><th>Risk</th></tr></thead>
+                                <tbody>
+                                    @foreach($departmentTrends->take(6) as $trend)
+                                        <tr>
+                                            <td>{{ $trend['label'] ?? 'Unknown' }}</td>
+                                            <td class="mono">{{ $trend['total_scans'] ?? 0 }}</td>
+                                            <td class="mono">{{ $trend['rejected_count'] ?? 0 }} <span class="muted">({{ number_format((float) ($trend['rejection_rate'] ?? 0), 1) }}%)</span></td>
+                                            <td class="mono">{{ $trend['duplicate_count'] ?? 0 }} <span class="muted">({{ number_format((float) ($trend['duplicate_rate'] ?? 0), 1) }}%)</span></td>
+                                            <td class="mono">{{ $trend['risk_score'] ?? 0 }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+                <div>
+                    <h3 style="margin:0 0 10px;font-size:14px">Levels</h3>
+                    @if($levelTrends->isEmpty())
+                        <div class="admin-empty">No level trend data available yet.</div>
+                    @else
+                        <div class="admin-table-wrap">
+                            <table class="admin-table" style="min-width:520px">
+                                <thead><tr><th>Level</th><th>Scans</th><th>Rejected</th><th>Duplicate</th><th>Risk</th></tr></thead>
+                                <tbody>
+                                    @foreach($levelTrends->take(6) as $trend)
+                                        <tr>
+                                            <td>{{ $trend['label'] ?? 'Unknown' }}</td>
+                                            <td class="mono">{{ $trend['total_scans'] ?? 0 }}</td>
+                                            <td class="mono">{{ $trend['rejected_count'] ?? 0 }} <span class="muted">({{ number_format((float) ($trend['rejection_rate'] ?? 0), 1) }}%)</span></td>
+                                            <td class="mono">{{ $trend['duplicate_count'] ?? 0 }} <span class="muted">({{ number_format((float) ($trend['duplicate_rate'] ?? 0), 1) }}%)</span></td>
+                                            <td class="mono">{{ $trend['risk_score'] ?? 0 }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            </div>
         </div>
     </section>
 

@@ -6,7 +6,7 @@
 @php
     $decisionClass = $scan->decision === 'APPROVED' ? 'green' : ($scan->decision === 'DUPLICATE' ? 'amber' : 'red');
     $tokenRef = $scan->token_id ? Str::limit($scan->token_id, 18) : 'Not available';
-    $issuedUsed = ($token->issued_at ?? $scan->issued_at ?? 'N/A') . ' / ' . ($token->used_at ?? $scan->used_at ?? 'N/A');
+    $issuedUsed = ($token->issued_at ?? $scan->issued_at ?? 'Not available') . ' / ' . ($token->used_at ?? $scan->used_at ?? 'Not available');
 @endphp
 
 <style>
@@ -46,7 +46,7 @@
                 <div class="safe">
                     <h1>{{ $student->full_name }}</h1>
                     <p class="mono muted">{{ $student->matric_no }}</p>
-                    <p class="muted">{{ $student->dept_name ?? 'Department unavailable' }} · {{ $student->level ?? 'N/A' }} Level · {{ $student->faculty ?? 'Faculty unavailable' }}</p>
+                    <p class="muted">{{ $student->dept_name ?? 'Department unavailable' }} · {{ $student->level ?? 'Not available' }} Level · {{ $student->faculty ?? 'Faculty unavailable' }}</p>
                 </div>
             </div>
         @else
@@ -74,7 +74,7 @@
             <div class="scan-panel-body">
                 <div class="scan-row"><span class="admin-label">Timestamp</span><span class="admin-value mono">{{ $scan->timestamp ?? 'Not available' }}</span></div>
                 <div class="scan-row"><span class="admin-label">Examiner</span><span class="admin-value">{{ $scan->examiner_name ?? $scan->examiner_username ?? 'Not available' }}</span></div>
-                <div class="scan-row"><span class="admin-label">Device / IP</span><span class="admin-value safe">{{ $scan->device_fp ?? 'N/A' }} · {{ $scan->ip_address ?? 'N/A' }}</span></div>
+                <div class="scan-row"><span class="admin-label">Device / IP</span><span class="admin-value safe">{{ $scan->device_fp ?? 'Not available' }} · {{ $scan->ip_address ?? 'Not available' }}</span></div>
                 <div class="scan-row"><span class="admin-label">Decision</span><span class="admin-value"><span class="admin-status {{ $decisionClass }}">{{ $scan->decision }}</span></span></div>
             </div>
         </section>

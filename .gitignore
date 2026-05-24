@@ -17,6 +17,8 @@ npm-debug.log
 yarn-error.log
 /screenshots
 /test-results
+__pycache__/
+*.pyc
 /auth.json
 /.fleet
 /.idea

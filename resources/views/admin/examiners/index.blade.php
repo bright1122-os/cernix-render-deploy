@@ -65,7 +65,7 @@
                             <td class="mono">{{ $examiner->approved_scans ?? 0 }}</td>
                             <td class="mono">{{ $examiner->rejected_scans ?? 0 }}</td>
                             <td class="mono">{{ $examiner->duplicate_scans ?? 0 }}</td>
-                            <td class="mono">{{ $examiner->last_active_at ?? $examiner->last_scan_at ?? 'N/A' }}</td>
+                            <td class="mono">{{ $examiner->last_active_at ?? $examiner->last_scan_at ?? 'Not available' }}</td>
                             <td style="display:flex;gap:8px;flex-wrap:wrap">
                                 <a class="admin-action ghost" href="{{ route('admin.examiners.show', $examiner->examiner_id) }}">View</a>
                                 @if($canToggle)

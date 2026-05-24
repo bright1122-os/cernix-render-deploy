@@ -24,8 +24,7 @@ def build_report(records: list[ScanRecord]) -> dict:
     risk_counts.update(item["risk_level"] for item in ips)
     daily_summary = build_daily_summary(records, students, examiners, devices, ips)
 
-    return {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+    summary = {
         "total_scans": len(records),
         "approved_count": decisions.get("APPROVED", 0),
         "rejected_count": decisions.get("REJECTED", 0),
@@ -33,11 +32,34 @@ def build_report(records: list[ScanRecord]) -> dict:
         "approval_rate": daily_summary["approval_rate"],
         "duplicate_rate": daily_summary["duplicate_rate"],
         "rejection_rate": daily_summary["rejection_rate"],
+        "total_students": len({row.matric_no for row in records if row.matric_no != "unknown"}),
+        "verified_payments": sum(1 for row in records if row.payment_status in {"verified", "verified demo payment", "payment successful"}),
+    }
+    risk_overview = {
+        "high_risk_students_count": sum(1 for item in students if item.get("risk_level") == "high"),
+        "medium_risk_students_count": sum(1 for item in students if item.get("risk_level") == "medium"),
+        "suspicious_examiners_count": len(examiners),
+        "suspicious_devices_count": len(devices),
+        "suspicious_ips_count": len(ips),
+        "duplicate_attempts": summary["duplicate_count"],
+        "rejected_attempts": summary["rejected_count"],
+    }
+    department_trends = build_trends(records, "department")
+    level_trends = build_trends(records, "level")
+
+    report = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "source": "python_risk_analyzer",
+        "summary": summary,
+        "risk_overview": risk_overview,
         "risk_distribution": {
             "low": risk_counts.get("low", 0),
             "medium": risk_counts.get("medium", 0),
             "high": risk_counts.get("high", 0),
         },
+        "department_trends": department_trends,
+        "level_trends": level_trends,
+        "key_observations": daily_summary["key_observations"],
         "high_risk_students": students,
         "suspicious_examiners": examiners,
         "suspicious_devices": devices,
@@ -52,6 +74,11 @@ def build_report(records: list[ScanRecord]) -> dict:
         "recommendations": daily_summary["recommendations"],
     }
 
+    # Backward-compatible top-level summary values for older Laravel readers.
+    report.update(summary)
+
+    return report
+
 
 def save_report_json(path: Path, report: dict) -> None:
     write_json(path, report)
@@ -63,12 +90,13 @@ def save_report_html(path: Path, report: dict) -> None:
 
 
 def render_html(report: dict) -> str:
+    summary = report.get("summary", report)
     metrics = [
-        ("Total scans", report.get("total_scans", 0)),
-        ("Approved", report.get("approved_count", 0)),
-        ("Rejected", report.get("rejected_count", 0)),
-        ("Duplicate", report.get("duplicate_count", 0)),
-        ("Approval rate", f"{report.get('approval_rate', 0)}%"),
+        ("Total scans", summary.get("total_scans", 0)),
+        ("Approved", summary.get("approved_count", 0)),
+        ("Rejected", summary.get("rejected_count", 0)),
+        ("Duplicate", summary.get("duplicate_count", 0)),
+        ("Approval rate", f"{summary.get('approval_rate', 0)}%"),
         ("Overall risk", report.get("risk_summary", {}).get("overall_level", "low").title()),
     ]
 
@@ -112,6 +140,14 @@ def render_html(report: dict) -> str:
     {risk_distribution(report.get("risk_distribution", {}))}
   </section>
   <section>
+    <h2>Department Trends</h2>
+    {trend_table(report.get("department_trends", []), "Department")}
+  </section>
+  <section>
+    <h2>Level Trends</h2>
+    {trend_table(report.get("level_trends", []), "Level")}
+  </section>
+  <section>
     <h2>High-Risk Students</h2>
     {student_table(report.get("high_risk_students", []))}
   </section>
@@ -153,6 +189,52 @@ def risk_distribution(dist: dict) -> str:
     return "<div class=\"grid\">" + "".join(
         metric_card(label.title(), dist.get(label, 0)) for label in ("low", "medium", "high")
     ) + "</div>"
+
+
+def build_trends(records: list[ScanRecord], attr: str) -> list[dict]:
+    grouped: dict[str, list[ScanRecord]] = {}
+    for record in records:
+        label = getattr(record, attr) or "Unknown"
+        grouped.setdefault(str(label), []).append(record)
+
+    trends = []
+    for label, rows in grouped.items():
+        decisions = Counter(row.decision for row in rows)
+        total = len(rows)
+        duplicate = decisions.get("DUPLICATE", 0)
+        rejected = decisions.get("REJECTED", 0)
+        risk_score = (duplicate * 20) + (rejected * 15)
+        trends.append({
+            "label": label,
+            "total_scans": total,
+            "approved_count": decisions.get("APPROVED", 0),
+            "rejected_count": rejected,
+            "duplicate_count": duplicate,
+            "approval_rate": round((decisions.get("APPROVED", 0) / total) * 100, 2) if total else 0.0,
+            "duplicate_rate": round((duplicate / total) * 100, 2) if total else 0.0,
+            "rejection_rate": round((rejected / total) * 100, 2) if total else 0.0,
+            "risk_score": risk_score,
+        })
+
+    return sorted(trends, key=lambda item: (item["risk_score"], item["total_scans"]), reverse=True)
+
+
+def trend_table(rows: list[dict], label: str) -> str:
+    if not rows:
+        return f'<div class="empty">No {escape(label.lower())} trend data available.</div>'
+    body = "".join(
+        "<tr>"
+        f"<td>{escape(row.get('label'))}</td>"
+        f"<td>{escape(row.get('total_scans'))}</td>"
+        f"<td>{escape(row.get('approved_count'))}</td>"
+        f"<td>{escape(row.get('rejected_count'))}</td>"
+        f"<td>{escape(row.get('duplicate_count'))}</td>"
+        f"<td>{escape(row.get('duplicate_rate'))}%</td>"
+        f"<td>{escape(row.get('rejection_rate'))}%</td>"
+        "</tr>"
+        for row in rows
+    )
+    return f"<table><thead><tr><th>{escape(label)}</th><th>Scans</th><th>Approved</th><th>Rejected</th><th>Duplicate</th><th>Duplicate rate</th><th>Rejection rate</th></tr></thead><tbody>{body}</tbody></table>"
 
 
 def student_table(rows: list[dict]) -> str:

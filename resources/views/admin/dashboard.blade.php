@@ -60,7 +60,7 @@
     .dash-pill { display:inline-flex; align-items:center; width:fit-content; padding:4px 8px; border-radius:999px; background:rgba(15,32,80,.06); color:var(--ink-2); font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
     @media (min-width:900px) {
         .dash-strip { grid-template-columns:repeat({{ $isSuperAdmin ? 6 : 4 }},minmax(0,1fr)); }
-        .dash-strip div, .dash-strip div:nth-child(2n) { border-right:1px solid var(--line); }
+        .dash-strip div, .dash-strip div:nth-child(2n) { border-right:1px solid var(--line); border-bottom:0; }
         .dash-strip div:nth-child({{ $isSuperAdmin ? 6 : 4 }}n) { border-right:0; }
         .dash-layout.two { grid-template-columns:minmax(0,1.1fr) minmax(320px,.72fr); align-items:start; }
     }
@@ -109,9 +109,9 @@
     <section class="dash-strip" aria-label="Super Admin overview">
         <div><span>Active Session</span><b>{{ $activeSession ? ($activeSession->semester . ' ' . $activeSession->academic_year) : 'Inactive' }}</b></div>
         <div><span>Demo Mode</span><b>{{ \App\Support\DepartmentFees::isDemoMode() ? 'Enabled' : 'Disabled' }}</b></div>
-        <div><span>School Fees</span><b>Editable</b></div>
-        <div><span>Admin Users</span><b>{{ number_format($metrics['examiners']) }}</b></div>
-        <div><span>Examiners</span><b>{{ number_format($metrics['examiners']) }}</b></div>
+        <div><span>School Fees</span><b>{{ number_format($metrics['departments'] ?? 0) }} departments</b></div>
+        <div><span>Admin Users</span><b>{{ number_format($metrics['admin_users'] ?? 0) }}</b></div>
+        <div><span>Examiners</span><b>{{ number_format($metrics['examiner_users'] ?? 0) }}</b></div>
         <div><span>Verification</span><b>{{ number_format($metrics['total_scans']) }} scans</b></div>
     </section>
 
@@ -171,7 +171,7 @@
                 <div class="dash-list">
                     <div class="dash-row"><div><b>Active session</b><span>{{ $activeSession ? ($activeSession->semester . ' / ' . $activeSession->academic_year) : 'No active session' }}</span></div><span class="dash-pill">{{ $activeSession ? 'Active' : 'Inactive' }}</span></div>
                     <div class="dash-row"><div><b>Today’s exams</b><span>{{ $departmentsToday->take(4)->implode(', ') ?: 'No department schedule published today.' }}</span></div><strong class="mono">{{ number_format($metrics['today_exams']) }}</strong></div>
-                    <div class="dash-row"><div><b>Setup checks</b><span>{{ $availableChecks }}/{{ $readiness->count() }} available.</span></div><span class="dash-pill">Available</span></div>
+                    <div class="dash-row"><div><b>Setup checks</b><span>{{ $availableChecks }}/{{ $readiness->count() }} operational checks passed.</span></div><span class="dash-pill">{{ $availableChecks === $readiness->count() ? 'Complete' : 'Review' }}</span></div>
                     <div class="dash-row"><div><b>Next exam</b><span>{{ $nextExam ? (($nextExam->course_code ?? 'Course') . ' / ' . ($nextExam->start_time ?? '--:--')) : 'No exam queued today.' }}</span></div><span></span></div>
                 </div>
             </div>

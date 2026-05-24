@@ -535,7 +535,7 @@ ol.steps li b{display:block;font-family:'Inter',sans-serif;font-weight:600;font-
       <div><b>Server</b><span>Verified decisions</span></div>
     </div>
 
-    <p class="body">The prototype records approved, rejected, and duplicate scan decisions so administrators can review access activity after each exam session.</p>
+    <p class="body">The system records approved, rejected, and duplicate scan decisions so administrators can review access activity after each exam session.</p>
   </section>
 
   <!-- CHAPTER 8 — ACKNOWLEDGMENTS -->
@@ -567,9 +567,9 @@ ol.steps li b{display:block;font-family:'Inter',sans-serif;font-weight:600;font-
   <section class="chapter end" id="ch9" data-ch="09">
     <div class="pre">— End of Book —</div>
     <h2>The hall doors are open.</h2>
-    <p>Step into the working prototype — register a student, generate a QR exam pass, scan at the door, and review the admin activity log.</p>
+    <p>Step into the working system — register a student, generate a QR exam pass, scan at the door, and review the admin activity log.</p>
     <div class="btns">
-      <a href="/student/register" class="btn btn-dark">Open Prototype →</a>
+      <a href="/student/register" class="btn btn-dark">Open Student Portal →</a>
       <a href="#top" class="btn btn-out">Back to start</a>
     </div>
   </section>

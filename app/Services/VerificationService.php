@@ -146,7 +146,7 @@ class VerificationService
                 'full_name'  => $student->full_name,
                 'matric_no'  => $student->matric_no,
                 'department_id' => $student->department_id,
-                'department' => $student->department_name ?? 'N/A',
+                'department' => $student->department_name ?? 'Department unavailable',
                 'photo_path' => $student->photo_path,
             ], $tokenId, $timestamp, $statusResult['reason'], $statusResult['used_at'], null, $traceId);
         }
@@ -167,7 +167,7 @@ class VerificationService
             'full_name'  => $student->full_name,
             'matric_no'  => $student->matric_no,
             'department_id' => $student->department_id,
-            'department' => $student->department_name ?? 'N/A',
+            'department' => $student->department_name ?? 'Department unavailable',
             'photo_path' => $student->photo_path,
         ], $tokenId, $timestamp, '', null, [
             'semester'      => $session->semester ?? '',

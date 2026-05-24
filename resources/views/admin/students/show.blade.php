@@ -32,7 +32,7 @@
                 <div>
                     <b style="font-size:20px">{{ $student->full_name }}</b>
                     <div class="mono muted">{{ $student->matric_no }}</div>
-                    <div class="muted">{{ $student->dept_name ?? 'Department unavailable' }} - {{ $student->level ?? 'N/A' }} level</div>
+                    <div class="muted">{{ $student->dept_name ?? 'Department unavailable' }} - {{ $student->level ?? 'Not available' }} level</div>
                 </div>
             </div>
             <div class="admin-info-list">
@@ -104,7 +104,7 @@
                             <td><span class="admin-status {{ $row->decision === 'APPROVED' ? 'green' : ($row->decision === 'DUPLICATE' ? 'amber' : 'red') }}">{{ $row->decision }}</span></td>
                             <td>{{ $row->examiner_name ?? 'Examiner unavailable' }}</td>
                             <td class="mono safe">{{ Str::limit($row->token_id, 18) }}</td>
-                            <td class="safe">{{ $row->ip_address ?? 'N/A' }} · {{ $row->device_fp ?? 'N/A' }}</td>
+                            <td class="safe">{{ $row->ip_address ?? 'Not available' }} · {{ $row->device_fp ?? 'Not available' }}</td>
                             <td><a class="admin-action ghost" href="{{ route('admin.scan-logs.show', $row->log_id) }}">View</a></td>
                         </tr>
                     @empty
