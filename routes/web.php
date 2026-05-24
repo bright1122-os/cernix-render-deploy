@@ -52,6 +52,7 @@ Route::get('/admin/notes', [AdminWebController::class, 'notes'])->name('admin.no
 Route::post('/admin/notes', [AdminWebController::class, 'noteStore'])->name('admin.notes.store');
 Route::patch('/admin/notes/{note}/resolve', [AdminWebController::class, 'noteResolve'])->name('admin.notes.resolve');
 Route::get('/admin/dashboard', [AdminWebController::class, 'index'])->name('admin.dashboard');
+Route::get('/admin/intelligence', [AdminWebController::class, 'intelligence'])->name('admin.intelligence');
 Route::get('/admin/students', [AdminWebController::class, 'students'])->name('admin.students');
 Route::get('/admin/student-trace', [AdminWebController::class, 'studentTrace'])->name('admin.student-trace');
 Route::get('/admin/students/{student}', [AdminWebController::class, 'studentShow'])->where('student', '.*')->name('admin.students.show');

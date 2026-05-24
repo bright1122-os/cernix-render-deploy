@@ -10,6 +10,7 @@
     $departmentsToday = $todaysExams->pluck('dept_name')->filter()->unique()->values();
     $roleLabel = \Illuminate\Support\Str::headline(strtolower((string) $currentRole));
     $systemLinks = [
+        ['label' => 'Risk Intelligence', 'route' => route('admin.intelligence')],
         ['label' => 'Settings', 'route' => route('admin.settings')],
         ['label' => 'User Management', 'route' => route('admin.examiners')],
         ['label' => 'School Fee Mapping', 'route' => route('admin.settings') . '#fee-mapping'],
@@ -20,11 +21,15 @@
     $adminLinks = [
         ['label' => 'Students', 'route' => route('admin.students')],
         ['label' => 'Student Trace', 'route' => route('admin.student-trace')],
+        ['label' => 'Risk Intelligence', 'route' => route('admin.intelligence')],
         ['label' => 'Payments', 'route' => route('admin.payments')],
         ['label' => 'Timetable', 'route' => route('admin.timetable')],
         ['label' => 'Verification Logs', 'route' => route('admin.scan-logs')],
         ['label' => 'Examiners', 'route' => route('admin.examiners')],
     ];
+    $intelExists = $intelligenceReport['exists'] ?? false;
+    $intelHighRisk = $intelligenceReport['high_risk_count'] ?? 0;
+    $intelGeneratedAt = $intelligenceReport['generated_at'] ?? null;
 @endphp
 
 <style>
@@ -78,6 +83,26 @@
     </div>
     <span class="dash-role">{{ $roleLabel }}</span>
 </div>
+
+<section class="dash-panel" style="margin-bottom:16px">
+    <div class="dash-panel-head">
+        <h2>Risk Intelligence</h2>
+        <a class="admin-action ghost" href="{{ route('admin.intelligence') }}">Open Intelligence</a>
+    </div>
+    <div class="dash-panel-body">
+        <div class="dash-row">
+            <div>
+                <b>{{ $intelExists ? ($intelligenceReport['status'] ?? 'Available') : 'Report not generated' }}</b>
+                <span>
+                    {{ $intelExists
+                        ? 'Latest report generated ' . ($intelGeneratedAt ?: 'at an unknown time') . '.'
+                        : 'Run the export and analyzer commands to generate admin risk insights.' }}
+                </span>
+            </div>
+            <strong class="mono">{{ number_format($intelHighRisk) }} high risk</strong>
+        </div>
+    </div>
+</section>
 
 @if($isSuperAdmin)
     <section class="dash-strip" aria-label="Super Admin overview">

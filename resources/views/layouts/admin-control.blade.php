@@ -8,6 +8,7 @@
     $adminRoleLabel = \Illuminate\Support\Str::headline(strtolower((string) $adminRole));
     $adminNav = [
         ['label' => 'Control Center', 'route' => 'admin.dashboard', 'match' => 'admin/dashboard'],
+        ['label' => 'Risk Intelligence', 'route' => 'admin.intelligence', 'match' => 'admin/intelligence*'],
         ['label' => 'Students', 'route' => 'admin.students', 'match' => 'admin/students*'],
         ['label' => 'Student Trace', 'route' => 'admin.student-trace', 'match' => 'admin/student-trace*'],
         ['label' => 'Examiners', 'route' => 'admin.examiners', 'match' => 'admin/examiners*'],

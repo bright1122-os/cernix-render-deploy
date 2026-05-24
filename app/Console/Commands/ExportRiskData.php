@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class ExportRiskData extends Command
 {
@@ -66,7 +65,14 @@ class ExportRiskData extends Command
             ->values()
             ->all();
 
-        Storage::disk('local')->put($path, json_encode([
+        $fullPath = storage_path('app/' . ltrim($path, '/'));
+        $directory = dirname($fullPath);
+
+        if (! is_dir($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        file_put_contents($fullPath, json_encode([
             'generated_at' => now()->toIso8601String(),
             'scan_logs' => $rows,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
