@@ -27,7 +27,7 @@
         ['label' => 'Verification Logs', 'route' => route('admin.scan-logs')],
         ['label' => 'Examiners', 'route' => route('admin.examiners')],
     ];
-    $intelSource = $intelligenceReport['source_label'] ?? 'Live Laravel summary';
+    $intelSource = $intelligenceReport['source_label'] ?? 'Live Summary';
     $intelHighRisk = $intelligenceReport['high_risk_count'] ?? 0;
     $intelTotalScans = $intelligenceReport['total_scans'] ?? 0;
     $intelDuplicate = $intelligenceReport['duplicate_count'] ?? 0;
@@ -49,11 +49,22 @@
     .dash-panel-head h2 { margin:0; font-size:16px; letter-spacing:-.02em; }
     .dash-panel-head span { color:var(--ink-3); font-size:12px; }
     .dash-panel-body { padding:16px 18px; }
+    .dash-panel-head .admin-action { flex-shrink:0; }
     .dash-list { display:grid; gap:0; }
     .dash-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:14px; align-items:center; padding:12px 0; border-bottom:1px solid var(--line); }
     .dash-row:last-child { border-bottom:0; }
-    .dash-row b { display:block; color:var(--ink); }
+    .dash-row > div { min-width:0; }
+    .dash-row b { display:block; color:var(--ink); overflow-wrap:anywhere; }
     .dash-row span { display:block; margin-top:4px; color:var(--ink-3); font-size:12px; line-height:1.45; }
+    .dash-row > strong,
+    .dash-row > .dash-pill,
+    .dash-row > .admin-action { justify-self:end; max-width:100%; overflow-wrap:anywhere; white-space:normal; text-align:right; }
+    .dash-intel { display:grid; gap:14px; }
+    .dash-intel-copy { min-width:0; }
+    .dash-intel-copy b { display:block; color:var(--ink); overflow-wrap:anywhere; }
+    .dash-intel-copy span { display:block; margin-top:4px; color:var(--ink-3); font-size:12px; line-height:1.5; max-width:620px; }
+    .dash-intel-metrics { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .dash-intel-chip { display:inline-flex; min-height:32px; align-items:center; padding:0 10px; border:1px solid var(--line); border-radius:999px; background:rgba(244,244,239,.72); color:var(--ink); font-size:12px; font-weight:900; line-height:1; white-space:nowrap; }
     .dash-actions { display:grid; gap:8px; }
     .dash-actions a { min-height:42px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 12px; border:1px solid var(--line); border-radius:14px; background:#fff; color:var(--ink); text-decoration:none; font-size:13px; font-weight:900; transition:transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
     .dash-actions a:hover { transform:translateY(-1px); border-color:var(--line-2); box-shadow:var(--shadow-sm); }
@@ -63,9 +74,28 @@
         .dash-strip div, .dash-strip div:nth-child(2n) { border-right:1px solid var(--line); border-bottom:0; }
         .dash-strip div:nth-child({{ $isSuperAdmin ? 6 : 4 }}n) { border-right:0; }
         .dash-layout.two { grid-template-columns:minmax(0,1.1fr) minmax(320px,.72fr); align-items:start; }
+        .dash-intel { grid-template-columns:minmax(0,1fr) auto; align-items:start; }
+        .dash-intel-metrics { justify-content:flex-end; max-width:360px; }
     }
     @media (max-width:560px) {
         .dash-head { display:block; }
+        .dash-role { margin-top:12px; }
+        .dash-panel-head { align-items:flex-start; }
+        .dash-panel-head .admin-action { width:100%; min-height:40px; }
+        .dash-panel-body { padding:14px; }
+        .dash-row { grid-template-columns:1fr; gap:8px; align-items:start; }
+        .dash-row > strong,
+        .dash-row > .dash-pill,
+        .dash-row > .admin-action { justify-self:start; text-align:left; }
+        .dash-intel-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .dash-intel-chip { justify-content:center; padding:0 8px; white-space:normal; text-align:center; }
+        .dash-intel-chip:last-child:nth-child(odd) { grid-column:1 / -1; }
+    }
+    @media (max-width:380px) {
+        .dash-strip { grid-template-columns:1fr; }
+        .dash-strip div,
+        .dash-strip div:nth-child(2n) { border-right:0; }
+        .dash-intel-metrics { grid-template-columns:1fr; }
     }
     @media (prefers-reduced-motion: reduce) {
         .dash-panel, .dash-actions a { animation:none !important; transition:none !important; }
@@ -91,16 +121,20 @@
         <a class="admin-action ghost" href="{{ route('admin.intelligence') }}">Open Intelligence</a>
     </div>
     <div class="dash-panel-body">
-        <div class="dash-row">
-            <div>
+        <div class="dash-intel">
+            <div class="dash-intel-copy">
                 <b>{{ $intelSource }}</b>
                 <span>
                     {{ ($intelligenceReport['source'] ?? 'live') === 'python'
-                        ? 'Python report loaded with current risk summary.'
-                        : 'Live summary available. Python-enhanced report not generated yet.' }}
+                        ? 'Enhanced risk scoring is available for the current activity summary.'
+                        : 'Live database summary is available for current records.' }}
                 </span>
             </div>
-            <strong class="mono">{{ number_format($intelTotalScans) }} scans / {{ number_format($intelDuplicate) }} duplicate / {{ number_format($intelHighRisk) }} high risk</strong>
+            <div class="dash-intel-metrics" aria-label="Risk intelligence summary">
+                <span class="dash-intel-chip mono">{{ number_format($intelTotalScans) }} scans</span>
+                <span class="dash-intel-chip mono">{{ number_format($intelDuplicate) }} duplicate</span>
+                <span class="dash-intel-chip mono">{{ number_format($intelHighRisk) }} high risk</span>
+            </div>
         </div>
     </div>
 </section>

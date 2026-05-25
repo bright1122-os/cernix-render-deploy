@@ -82,14 +82,13 @@ class RiskIntelligenceService
 
         return [
             'source' => 'python',
-            'source_label' => 'Python report',
-            'status' => $highRiskStudents > 0 ? 'Review needed' : 'Available',
-            'notice' => 'Python-enhanced report loaded.',
+            'source_label' => 'Python Enhanced',
+            'status' => $highRiskStudents > 0 ? 'Review needed' : 'Monitoring',
+            'notice' => null,
             'error' => null,
             'generated_at' => $data['generated_at'] ?? $summarySource['generated_at'] ?? null,
-            'json_path' => 'storage/app/risk-analysis/risk_report.json',
-            'html_path' => 'storage/app/risk-analysis/risk_report.html',
-            'html_exists' => file_exists($this->htmlPath),
+            'last_updated_label' => $this->formatTimestamp($data['generated_at'] ?? $summarySource['generated_at'] ?? null),
+            'freshness_label' => 'Source: Python-enhanced report',
             'summary' => $this->summaryShape($summarySource),
             'risk_overview' => [
                 'high_risk_students_count' => (int) ($overviewSource['high_risk_students_count'] ?? $highRiskStudents),
@@ -124,14 +123,13 @@ class RiskIntelligenceService
 
         return [
             'source' => 'live',
-            'source_label' => 'Live Laravel summary',
+            'source_label' => 'Live Summary',
             'status' => 'Live summary available',
-            'notice' => 'Python-enhanced report has not been generated yet. Showing live Laravel summary.',
+            'notice' => 'Live database summary is shown below. Enhanced scoring becomes available after the intelligence report runs.',
             'error' => null,
             'generated_at' => now()->toIso8601String(),
-            'json_path' => 'storage/app/risk-analysis/risk_report.json',
-            'html_path' => 'storage/app/risk-analysis/risk_report.html',
-            'html_exists' => file_exists($this->htmlPath),
+            'last_updated_label' => 'Generated live for this request',
+            'freshness_label' => 'Source: Live database summary',
             'summary' => $summary,
             'risk_overview' => [
                 'high_risk_students_count' => collect($students)->where('risk_level', 'high')->count(),
@@ -181,6 +179,7 @@ class RiskIntelligenceService
             'rejection_rate' => $this->rate($rejected, $total),
             'total_students' => $this->countTable('students'),
             'verified_payments' => $this->countTable('payment_records'),
+            'qr_issued' => $this->countTable('qr_tokens'),
             'active_tokens' => $unusedTokens,
             'unused_tokens' => $unusedTokens,
         ];
@@ -464,7 +463,7 @@ class RiskIntelligenceService
     private function fallbackRecommendations(array $summary, array $students, array $examiners, array $devices, array $ips): array
     {
         $items = [
-            'Generate the Python-enhanced report for deeper device and student risk scoring.',
+            'Use enhanced risk scoring during active exam periods for deeper device and student pattern review.',
             'Keep demo mode disabled for real production usage.',
         ];
 
@@ -501,6 +500,7 @@ class RiskIntelligenceService
             'rejection_rate' => (float) ($source['rejection_rate'] ?? $this->rate($rejected, $total)),
             'total_students' => (int) ($source['total_students'] ?? $this->countTable('students')),
             'verified_payments' => (int) ($source['verified_payments'] ?? $this->countTable('payment_records')),
+            'qr_issued' => (int) ($source['qr_issued'] ?? $source['active_tokens'] ?? $source['unused_tokens'] ?? 0),
             'active_tokens' => (int) ($source['active_tokens'] ?? 0),
             'unused_tokens' => (int) ($source['unused_tokens'] ?? 0),
         ];
@@ -597,6 +597,19 @@ class RiskIntelligenceService
             return Schema::hasTable($table);
         } catch (\Throwable) {
             return false;
+        }
+    }
+
+    private function formatTimestamp(?string $timestamp): string
+    {
+        if (! $timestamp) {
+            return 'Updated recently';
+        }
+
+        try {
+            return \Carbon\Carbon::parse($timestamp)->format('M j, Y g:i A');
+        } catch (\Throwable) {
+            return 'Updated recently';
         }
     }
 }

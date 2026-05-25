@@ -23,7 +23,7 @@
     .hero::after {
         content: ""; position: absolute; right: 28px; bottom: 26px;
         width: 150px; height: 150px; background: url('/aaua-logo.png') center / contain no-repeat;
-        opacity: .18; pointer-events: none;
+        opacity: .2; pointer-events: none;
     }
     .logo-mark {
         display: inline-flex; align-items: center; gap: 10px;

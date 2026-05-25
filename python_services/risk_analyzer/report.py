@@ -34,6 +34,7 @@ def build_report(records: list[ScanRecord]) -> dict:
         "rejection_rate": daily_summary["rejection_rate"],
         "total_students": len({row.matric_no for row in records if row.matric_no != "unknown"}),
         "verified_payments": sum(1 for row in records if row.payment_status in {"verified", "verified demo payment", "payment successful"}),
+        "qr_issued": len({row.token_id for row in records if row.token_id != "unknown"}),
     }
     risk_overview = {
         "high_risk_students_count": sum(1 for item in students if item.get("risk_level") == "high"),
