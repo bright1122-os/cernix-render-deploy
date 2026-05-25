@@ -156,9 +156,13 @@ class AdminApiTest extends TestCase
         $response->assertStatus(201)
                  ->assertJsonPath('status', 'success')
                  ->assertJsonPath('data.username', 'newexaminer')
-                 ->assertJson(['data' => ['is_active' => false]]);
+                 ->assertJson(['data' => ['is_active' => true]]);
 
-        $this->assertDatabaseHas('examiners', ['username' => 'newexaminer']);
+        $this->assertDatabaseHas('examiners', [
+            'username' => 'newexaminer',
+            'role' => 'examiner',
+            'is_active' => true,
+        ]);
     }
 
     public function test_create_examiner_rejects_duplicate_username(): void

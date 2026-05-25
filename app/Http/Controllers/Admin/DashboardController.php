@@ -213,13 +213,13 @@ class DashboardController extends Controller
             'full_name'     => 'required|string|max:100',
             'username'      => 'required|string|max:100|unique:examiners,username',
             'password'      => 'required|string|min:8',
-            'role'          => 'nullable|in:EXAMINER,ADMIN,examiner,admin',
+            'role'          => 'nullable|in:EXAMINER,ADMIN,SUPER_ADMIN,examiner,admin,super_admin',
             'admin_user_id' => Schema::hasColumn('examiners', 'admin_user_id') ? 'nullable|integer|exists:users,id' : 'nullable',
         ]);
 
         $role = strtolower($data['role'] ?? 'examiner');
 
-        if ($role === 'admin' && ! $this->isSuperAdmin()) {
+        if (in_array($role, ['admin', 'super_admin'], true) && ! $this->isSuperAdmin()) {
             return $this->forbidden();
         }
 
@@ -232,7 +232,7 @@ class DashboardController extends Controller
             'username'      => $data['username'],
             'password_hash' => Hash::make($data['password']),
             'role'          => $role,
-            'is_active'     => false,
+            'is_active'     => true,
             'created_at'    => now(),
         ];
 
@@ -253,7 +253,7 @@ class DashboardController extends Controller
             'examiner',
             (string) $id,
             null,
-            ['role' => $role, 'admin_user_id' => $adminUserId, 'is_active' => false]
+            ['role' => $role, 'admin_user_id' => $adminUserId, 'is_active' => true]
         );
 
         return response()->json([

@@ -3,6 +3,18 @@
 @section('admin-title', 'Admin Students')
 
 @section('admin-content')
+<style>
+    .student-row-id { display:flex; align-items:center; gap:12px; min-width:240px; }
+    .student-avatar { width:42px; height:42px; border-radius:14px; display:grid; place-items:center; flex:0 0 auto; background:rgba(15,32,80,.08); color:var(--navy); font-weight:950; letter-spacing:.02em; border:1px solid var(--line); }
+    .student-name { display:block; color:var(--ink); font-weight:900; line-height:1.2; overflow-wrap:anywhere; }
+    .student-sub { display:block; margin-top:4px; color:var(--ink-3); font-size:12px; }
+    .student-actions { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+    @media (max-width:640px) {
+        .student-row-id { min-width:220px; }
+        .student-actions { justify-content:flex-start; }
+    }
+</style>
+
 <div class="admin-page-head">
     <div>
         <div class="cx-eyebrow">Student Records</div>
@@ -51,15 +63,31 @@
                 </thead>
                 <tbody>
                     @forelse($students as $student)
+                        @php
+                            $initials = collect(explode(' ', (string) $student->full_name))
+                                ->filter()
+                                ->take(2)
+                                ->map(fn ($part) => strtoupper(substr($part, 0, 1)))
+                                ->implode('') ?: 'ST';
+                            $tokenStatus = strtoupper((string) ($student->token_status ?? ''));
+                        @endphp
                         <tr>
-                            <td class="safe"><strong>{{ $student->full_name }}</strong></td>
+                            <td class="safe">
+                                <div class="student-row-id">
+                                    <span class="student-avatar" aria-hidden="true">{{ $initials }}</span>
+                                    <div>
+                                        <span class="student-name">{{ $student->full_name }}</span>
+                                        <span class="student-sub">{{ $student->faculty ?? 'Faculty not recorded' }}</span>
+                                    </div>
+                                </div>
+                            </td>
                             <td class="mono">{{ $student->matric_no }}</td>
                             <td>{{ $student->dept_name ?? 'Not available' }}</td>
                             <td>{{ $student->level ?? 'Not available' }}</td>
                             <td><span class="admin-status {{ $student->verified_at ? 'green' : 'amber' }}">{{ $student->verified_at ? 'Verified' : 'Pending' }}</span></td>
-                            <td><span class="admin-status {{ ($student->token_status ?? '') === 'UNUSED' ? 'green' : 'amber' }}">{{ $student->token_status ?? 'Missing' }}</span></td>
+                            <td><span class="admin-status {{ $tokenStatus === 'UNUSED' ? 'green' : ($tokenStatus === 'USED' ? 'amber' : 'red') }}">{{ $student->token_status ?? 'Missing' }}</span></td>
                             <td class="mono">{{ $student->created_at ? \Carbon\Carbon::parse($student->created_at)->format('M d, Y') : 'Not available' }}</td>
-                            <td><a class="admin-action ghost" href="{{ route('admin.students.show', ['student' => $student->matric_no]) }}">View</a></td>
+                            <td><div class="student-actions"><a class="admin-action ghost" href="{{ route('admin.students.show', ['student' => $student->matric_no]) }}">View</a></div></td>
                         </tr>
                     @empty
                         <tr><td colspan="8"><div class="admin-empty">No registered students match this filter.</div></td></tr>

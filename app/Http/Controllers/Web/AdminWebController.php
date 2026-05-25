@@ -46,24 +46,54 @@ class AdminWebController extends Controller
 
         $students = DB::table('students')
             ->leftJoin('departments', 'students.department_id', '=', 'departments.dept_id')
-            ->leftJoin('payment_records', 'students.matric_no', '=', 'payment_records.student_id')
-            ->leftJoin('qr_tokens', 'students.matric_no', '=', 'qr_tokens.student_id')
             ->select(
                 'students.*',
                 'departments.dept_name',
-                'departments.faculty',
-                'payment_records.rrr_number',
-                'payment_records.verified_at',
-                'qr_tokens.status as token_status',
-                'qr_tokens.issued_at'
+                'departments.faculty'
             )
+            ->selectSub(function ($query) {
+                $query->from('payment_records')
+                    ->select('rrr_number')
+                    ->whereColumn('payment_records.student_id', 'students.matric_no')
+                    ->orderByDesc('verified_at')
+                    ->limit(1);
+            }, 'rrr_number')
+            ->selectSub(function ($query) {
+                $query->from('payment_records')
+                    ->select('verified_at')
+                    ->whereColumn('payment_records.student_id', 'students.matric_no')
+                    ->orderByDesc('verified_at')
+                    ->limit(1);
+            }, 'verified_at')
+            ->selectSub(function ($query) {
+                $query->from('qr_tokens')
+                    ->select('status')
+                    ->whereColumn('qr_tokens.student_id', 'students.matric_no')
+                    ->orderByDesc('issued_at')
+                    ->limit(1);
+            }, 'token_status')
+            ->selectSub(function ($query) {
+                $query->from('qr_tokens')
+                    ->select('issued_at')
+                    ->whereColumn('qr_tokens.student_id', 'students.matric_no')
+                    ->orderByDesc('issued_at')
+                    ->limit(1);
+            }, 'issued_at')
             ->when($request->filled('q'), function ($query) use ($request) {
                 $q = '%' . $request->input('q') . '%';
                 $query->where(fn ($inner) => $inner
                     ->where('students.full_name', 'like', $q)
                     ->orWhere('students.matric_no', 'like', $q)
-                    ->orWhere('payment_records.rrr_number', 'like', $q)
-                    ->orWhere('qr_tokens.token_id', 'like', $q));
+                    ->orWhereExists(fn ($sub) => $sub
+                        ->select(DB::raw(1))
+                        ->from('payment_records')
+                        ->whereColumn('payment_records.student_id', 'students.matric_no')
+                        ->where('payment_records.rrr_number', 'like', $q))
+                    ->orWhereExists(fn ($sub) => $sub
+                        ->select(DB::raw(1))
+                        ->from('qr_tokens')
+                        ->whereColumn('qr_tokens.student_id', 'students.matric_no')
+                        ->where('qr_tokens.token_id', 'like', $q)));
             })
             ->when($request->filled('department'), fn ($query) => $query->where('departments.dept_name', $request->input('department')))
             ->when($request->filled('level'), fn ($query) => $query->where('students.level', $request->input('level')))
@@ -100,16 +130,26 @@ class AdminWebController extends Controller
             ->where('exam_session_id', $student->session_id)
             ->count();
 
-        $scanHistory = DB::table('verification_logs')
+        $scanBase = DB::table('verification_logs')
             ->join('qr_tokens', 'verification_logs.token_id', '=', 'qr_tokens.token_id')
             ->leftJoin('examiners', 'verification_logs.examiner_id', '=', 'examiners.examiner_id')
-            ->where('qr_tokens.student_id', $matricNo)
+            ->where('qr_tokens.student_id', $matricNo);
+
+        $scanCounts = (clone $scanBase)
+            ->select('verification_logs.decision', DB::raw('COUNT(*) as total'))
+            ->groupBy('verification_logs.decision')
+            ->pluck('total', 'decision');
+
+        $latestScan = (clone $scanBase)
+            ->select('verification_logs.*', 'examiners.full_name as examiner_name')
+            ->orderByDesc('verification_logs.timestamp')
+            ->first();
+
+        $scanHistory = (clone $scanBase)
             ->select('verification_logs.*', 'examiners.full_name as examiner_name')
             ->orderByDesc('verification_logs.timestamp')
             ->limit(20)
             ->get();
-
-        $scanCounts = $scanHistory->groupBy('decision')->map->count();
 
         $timeline = collect([
             $payment ? ['label' => 'Payment verified', 'time' => $payment->verified_at, 'meta' => $payment->rrr_number] : null,
@@ -123,7 +163,7 @@ class AdminWebController extends Controller
 
         $notes = $this->adminNotes('student', $matricNo);
 
-        return view('admin.students.show', compact('student', 'payment', 'token', 'timetableCount', 'scanHistory', 'scanCounts', 'timeline', 'notes'));
+        return view('admin.students.show', compact('student', 'payment', 'token', 'timetableCount', 'scanHistory', 'scanCounts', 'latestScan', 'timeline', 'notes'));
     }
 
     public function examiners(Request $request)
@@ -151,7 +191,8 @@ class AdminWebController extends Controller
         $examiners = DB::table('examiners')
             ->leftJoinSub($scanStats, 'scan_stats', fn ($join) => $join->on('examiners.examiner_id', '=', 'scan_stats.examiner_id'))
             ->select($select)
-            ->orderBy('examiners.full_name')
+            ->orderByDesc('examiners.created_at')
+            ->orderByDesc('examiners.examiner_id')
             ->paginate(25);
 
         $permissions = $this->permissionSummary($request);
@@ -242,19 +283,27 @@ class AdminWebController extends Controller
             'created_at' => now(),
         ];
 
+        if ($this->examinerHasColumn('admin_user_id')) {
+            $insert['admin_user_id'] = null;
+        }
+
         if ($this->examinerHasColumn('last_active_at')) {
             $insert['last_active_at'] = null;
         }
 
-        $id = DB::table('examiners')->insertGetId($insert);
-        $this->audit('user.created', [
-            'entity_type' => 'examiner',
-            'entity_id' => $id,
-            'username' => $data['username'],
-            'created_role' => $role,
-        ], $request);
+        $id = DB::transaction(function () use ($insert, $data, $role, $request) {
+            $id = DB::table('examiners')->insertGetId($insert);
+            $this->audit('user.created', [
+                'entity_type' => 'examiner',
+                'entity_id' => $id,
+                'username' => $data['username'],
+                'created_role' => $role,
+            ], $request);
 
-        return redirect()->route('admin.examiners.show', $id)->with('status', 'User account created.');
+            return $id;
+        });
+
+        return redirect()->route('admin.examiners.show', $id)->with('status', Str::headline($role) . ' account created.');
     }
 
     public function examinerToggle(Request $request, int $examiner): RedirectResponse
