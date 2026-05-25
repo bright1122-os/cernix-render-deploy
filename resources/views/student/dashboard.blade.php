@@ -9,7 +9,7 @@
     $steps = [
         ['label' => 'Registration', 'value' => 'Complete', 'meta' => $registeredAt],
         ['label' => 'Payment', 'value' => $payment ? 'Verified' : 'Pending', 'meta' => $paymentAt ?: 'Awaiting payment record'],
-        ['label' => 'QR Access', 'value' => $token->status ?? 'Pending', 'meta' => $token?->issued_at ? 'Issued ' . \Illuminate\Support\Carbon::parse($token->issued_at)->format('d M Y, H:i') : 'Token pending'],
+        ['label' => 'Exam Pass', 'value' => match(strtoupper((string) ($token->status ?? ''))) { 'UNUSED' => 'Ready', 'USED' => 'Already scanned', 'REVOKED' => 'Unavailable', default => $token->status ?? 'Pending' }, 'meta' => $token?->issued_at ? 'Issued ' . \Illuminate\Support\Carbon::parse($token->issued_at)->format('d M Y, H:i') : 'Pass pending'],
         ['label' => 'Timetable', 'value' => $timetable->count() ? 'Assigned' : 'Not assigned', 'meta' => $timetable->count() ? $timetable->count() . ' exams available' : 'Check back after admin scheduling'],
     ];
 @endphp
@@ -36,7 +36,7 @@
     <section class="cx-card cx-card-pad">
         <div class="cx-section-title"><h2>Quick Actions</h2><span>Next useful steps</span></div>
         <div class="cx-grid">
-            <a class="btn btn-primary btn-block" href="{{ route('student.exam-access-id') }}">Open QR Generator / Exam Access ID</a>
+            <a class="btn btn-primary btn-block" href="{{ route('student.exam-access-id') }}">Open Exam Access ID</a>
             <a class="btn btn-ghost btn-block" href="{{ route('student.timetable') }}">View Timetable</a>
             <a class="btn btn-ghost btn-block" href="{{ route('student.exam-pass') }}">Print Pass</a>
         </div>
@@ -46,7 +46,7 @@
 <section class="cx-metric-grid" style="margin-top:16px">
     <div class="cx-metric"><span>Registered</span><b>Complete</b></div>
     <div class="cx-metric"><span>Payment</span><b>{{ $payment ? 'Verified' : 'Pending' }}</b></div>
-    <div class="cx-metric"><span>QR</span><b>{{ $token->status ?? 'Pending' }}</b></div>
+    <div class="cx-metric"><span>Exam Pass</span><b>{{ match(strtoupper((string) ($token->status ?? ''))) { 'UNUSED' => 'Ready', 'USED' => 'Already scanned', 'REVOKED' => 'Unavailable', default => $token->status ?? 'Pending' } }}</b></div>
     <div class="cx-metric"><span>Timetable</span><b>{{ $timetable->count() ? $timetable->count() . ' Exams' : 'Not Assigned' }}</b></div>
     <div class="cx-metric"><span>Next Exam</span><b>{{ $nextExam->display_status ?? 'None' }}</b></div>
 </section>
@@ -84,14 +84,14 @@
     @if($scanHistory->count())
         <div class="cx-table-wrap">
             <table class="cx-table">
-                <thead><tr><th>Time</th><th>Decision</th><th>Examiner</th><th>Token</th><th>Action</th></tr></thead>
+                <thead><tr><th>Time</th><th>Decision</th><th>Examiner</th><th>Review Status</th><th>Action</th></tr></thead>
                 <tbody>
                     @foreach($scanHistory as $scan)
                         <tr>
                             <td class="mono">{{ $scan->timestamp }}</td>
-                            <td><span class="chip {{ $scan->decision === 'APPROVED' ? 'emerald' : ($scan->decision === 'DUPLICATE' ? 'amber' : 'red') }}">{{ $scan->decision }}</span></td>
+                            <td><span class="chip {{ $scan->decision === 'APPROVED' ? 'emerald' : ($scan->decision === 'DUPLICATE' ? 'amber' : 'red') }}">{{ $scan->decision === 'DUPLICATE' ? 'REPEATED' : $scan->decision }}</span></td>
                             <td>{{ $scan->examiner_name ?? $scan->examiner_username ?? 'Examiner unavailable' }}</td>
-                            <td class="mono cx-safe">{{ Str::limit($scan->token_id, 18) }}</td>
+                            <td>{{ $scan->decision === 'DUPLICATE' ? 'Repeated scan recorded' : 'Recorded' }}</td>
                             <td><a class="btn btn-ghost" href="{{ route('student.scans.show', $scan->log_id) }}">View</a></td>
                         </tr>
                     @endforeach
@@ -99,7 +99,7 @@
             </table>
         </div>
     @else
-        <div class="cx-empty">No QR scan activity has been recorded for your access ID yet.</div>
+        <div class="cx-empty">No scan activity has been recorded for your access ID yet.</div>
     @endif
 </section>
 

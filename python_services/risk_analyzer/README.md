@@ -8,7 +8,7 @@ Python is used only for:
 - suspicious scan pattern detection
 - examiner behavior analysis
 - student access anomaly detection
-- device/IP pattern analysis
+- scanner and network pattern analysis
 - payment/demo-mode risk notes
 - daily summary reporting
 - admin-readable JSON and HTML reports
@@ -115,6 +115,7 @@ The JSON report uses a Laravel-friendly structure:
 - `department_trends`
 - `level_trends`
 - `key_observations`
+- `student_risks`
 - `high_risk_students`
 - `suspicious_examiners`
 - `suspicious_devices`
@@ -137,37 +138,41 @@ The HTML report includes:
 
 Student rules:
 
-- `+35` if the same token has duplicate scans
-- `+30` if student has three or more rejected scans
-- `+25` if student appears on more than two device fingerprints
-- `+20` if student appears from more than two IP addresses
+- `+40` if an exam pass is scanned again after approval
+- `+35` if the same exam pass has repeated scans
+- `+25` if student has repeated rejected scans
+- `+20` if student appears on multiple device fingerprints
+- `+20` if student appears from multiple IP addresses
 - `+20` if payment status is missing or not verified
-- `+15` if QR/token status is suspicious
+- `+15` if exam pass status needs review
 - `+15` if scan happened outside expected exam time
-- `+10` if repeated scans happen within a very short interval
+- `+15` if repeated scans happen within two minutes
+- `+10` if scan attempt count is unusually high
 
 Examiner rules flag:
 
-- unusually high rejected scans
-- unusually high duplicate scans
+- repeated scans
+- repeated rejected scans
+- repeated scans of the same token/student
 - too many scans in a short time window
 - very high scan volume compared to other examiners
-- unusual device/IP spread
+- unusual scanner or network spread
 - scans outside expected exam windows
 
-Device/IP rules flag:
+Scanner and network rules flag:
 
 - one device used for many students
 - one IP producing many rejected scans
-- one device producing many duplicate scans
+- one scanner device producing many repeated scans
 - one IP/device linked to multiple examiners
 - repeated failed attempts from the same identifier
 
 Risk levels:
 
-- `0-30` = Low
-- `31-60` = Medium
-- `61+` = High
+- `0-24` = Low
+- `25-49` = Medium
+- `50-74` = High
+- `75+` = Critical
 
 ## Laravel Integration Modes
 

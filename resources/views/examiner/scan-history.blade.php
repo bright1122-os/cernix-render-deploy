@@ -20,7 +20,6 @@
                         <th>Student</th>
                         <th>Matric</th>
                         <th>Decision</th>
-                        <th>Token</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -30,8 +29,7 @@
                             <td data-label="Time">{{ $row['time'] }}</td>
                             <td data-label="Student" class="safe"><strong>{{ $row['student'] }}</strong></td>
                             <td data-label="Matric" class="ex-mono">{{ $row['matric_no'] }}</td>
-                            <td data-label="Decision"><span class="ex-badge {{ $row['decision'] }}">{{ $row['decision'] }}</span></td>
-                            <td data-label="Token" class="ex-mono">{{ $row['token_ref'] }}</td>
+                            <td data-label="Decision"><span class="ex-badge {{ $row['decision'] }}">{{ $row['decision'] === 'DUPLICATE' ? 'REPEATED' : $row['decision'] }}</span></td>
                             <td data-label="Action"><a class="ex-action secondary" href="{{ $row['detail_url'] }}">View</a></td>
                         </tr>
                     @endforeach

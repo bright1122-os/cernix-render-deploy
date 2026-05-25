@@ -26,6 +26,7 @@ def analyze_students(records: list[ScanRecord]) -> list[dict]:
         score = 0
         reasons: list[str] = []
         token_counts = Counter(row.token_id for row in rows if row.token_id != "unknown")
+        duplicate_count = sum(1 for row in rows if row.decision == "DUPLICATE")
         rejected_count = sum(1 for row in rows if row.decision == "REJECTED")
         device_count = len({row.device_fp for row in rows if row.device_fp != "unknown"})
         ip_count = len({row.ip_address for row in rows if row.ip_address != "unknown"})
@@ -34,21 +35,25 @@ def analyze_students(records: list[ScanRecord]) -> list[dict]:
         short_interval = has_short_repeated_scans(rows)
         outside_window = any(is_outside_exam_window(row) for row in rows)
 
-        if any(count > 1 for count in token_counts.values()):
+        if duplicate_count > 0 and "USED" in statuses:
+            score += 40
+            reasons.append("This exam pass was scanned again after approval")
+
+        if duplicate_count >= 1 or any(count > 1 for count in token_counts.values()):
             score += 35
-            reasons.append("same token has duplicate scan activity")
+            reasons.append(f"{duplicate_count or 1} duplicate/repeated scan attempt(s)")
 
-        if rejected_count >= 3:
-            score += 30
-            reasons.append("student has three or more rejected scans")
-
-        if device_count > 2:
+        if rejected_count >= 2:
             score += 25
-            reasons.append("student appears on more than two device fingerprints")
+            reasons.append("student has repeated rejected scans")
 
-        if ip_count > 2:
+        if device_count >= 2:
             score += 20
-            reasons.append("student appears from more than two IP addresses")
+            reasons.append("student appears on multiple device fingerprints")
+
+        if ip_count >= 2:
+            score += 20
+            reasons.append("student appears from multiple IP addresses")
 
         if not payment_statuses or any(status not in VERIFIED_PAYMENT_STATUSES for status in payment_statuses):
             score += 20
@@ -56,17 +61,21 @@ def analyze_students(records: list[ScanRecord]) -> list[dict]:
 
         if {status for status in statuses if status not in EXPECTED_QR_STATUSES}:
             score += 15
-            reasons.append("QR/token status is suspicious")
+            reasons.append("exam pass status needs review")
 
         if outside_window:
             score += 15
             reasons.append("scan happened outside expected exam time")
 
         if short_interval:
-            score += 10
-            reasons.append("repeated scans happened within a very short interval")
+            score += 15
+            reasons.append("repeated scans happened within two minutes")
 
-        if score > 30:
+        if len(rows) >= 4:
+            score += 10
+            reasons.append("high scan attempt count for one exam access")
+
+        if score > 0:
             example = rows[0]
             findings.append({
                 "matric_no": matric_no,
@@ -78,9 +87,12 @@ def analyze_students(records: list[ScanRecord]) -> list[dict]:
                 "reasons": reasons,
                 "recommendation": student_recommendation(score),
                 "scan_count": len(rows),
+                "duplicate_count": duplicate_count,
                 "rejected_count": rejected_count,
                 "device_count": device_count,
                 "ip_count": ip_count,
+                "last_activity": max((row.timestamp for row in rows if row.timestamp), default=None).isoformat()
+                if any(row.timestamp for row in rows) else None,
             })
 
     return sorted(findings, key=lambda item: item["score"], reverse=True)
@@ -108,16 +120,23 @@ def analyze_examiners(records: list[ScanRecord]) -> list[dict]:
         score = 0
         reasons: list[str] = []
 
-        if rejected >= 5 or (len(rows) >= 4 and rejected / max(len(rows), 1) >= 0.5):
-            score += 35
-            reasons.append("unusually high rejected scan volume")
+        repeated_tokens = sum(1 for count in Counter(row.token_id for row in rows if row.token_id != "unknown").values() if count > 1)
+        suspicious_students = len({row.matric_no for row in rows if row.decision in {"DUPLICATE", "REJECTED"} and row.matric_no != "unknown"})
 
-        if duplicate >= 3 or (len(rows) >= 4 and duplicate / max(len(rows), 1) >= 0.35):
+        if duplicate >= 1:
             score += 30
-            reasons.append("unusually high duplicate scan volume")
+            reasons.append("repeated scan attempts recorded")
 
-        if burst >= 8:
+        if rejected >= 2 or (len(rows) >= 4 and rejected / max(len(rows), 1) >= 0.5):
             score += 25
+            reasons.append("rejected scan volume requires review")
+
+        if repeated_tokens >= 1:
+            score += 20
+            reasons.append("same student/token scanned repeatedly")
+
+        if burst >= 3:
+            score += 15
             reasons.append("too many scans processed in a short time window")
 
         if average_scans and len(rows) > max(10, average_scans * 2):
@@ -125,8 +144,12 @@ def analyze_examiners(records: list[ScanRecord]) -> list[dict]:
             reasons.append("very high approval/scan volume compared to other examiners")
 
         if device_count > 2 or ip_count > 2:
-            score += 15
+            score += 10
             reasons.append("examiner appears across many devices or IP addresses")
+
+        if suspicious_students >= 2:
+            score += 15
+            reasons.append("examiner is linked to multiple suspicious students")
 
         if outside_window:
             score += 15
@@ -147,6 +170,9 @@ def analyze_examiners(records: list[ScanRecord]) -> list[dict]:
                 "max_two_minute_burst": burst,
                 "device_count": device_count,
                 "ip_count": ip_count,
+                "suspicious_students_count": suspicious_students,
+                "last_activity": max((row.timestamp for row in rows if row.timestamp), default=None).isoformat()
+                if any(row.timestamp for row in rows) else None,
             })
 
     return sorted(findings, key=lambda item: item["suspicious_score"], reverse=True)
@@ -167,17 +193,17 @@ def analyze_endpoints(records: list[ScanRecord], attr: str, endpoint_type: str) 
         score = 0
         reasons: list[str] = []
 
-        if unique_students >= 4:
-            score += 35
+        if unique_students >= 3:
+            score += 30
             reasons.append("identifier appears across many students")
 
-        if rejected >= 4:
-            score += 30
+        if rejected >= 2:
+            score += 25
             reasons.append("identifier produced many rejected scans")
 
-        if duplicate >= 3:
+        if duplicate >= 1:
             score += 25
-            reasons.append("identifier produced many duplicate scans")
+            reasons.append("scanner or network pattern produced many repeated scans")
 
         if unique_examiners > 1:
             score += 20
@@ -250,7 +276,7 @@ def build_daily_summary(
 
 
 def has_short_repeated_scans(rows: list[ScanRecord]) -> bool:
-    return max_scans_in_window(rows, seconds=60) >= 3
+    return max_scans_in_window(rows, seconds=120) >= 2
 
 
 def max_scans_in_window(rows: list[ScanRecord], seconds: int) -> int:
@@ -281,14 +307,16 @@ def most_common_label(counter: Counter) -> dict | None:
 
 
 def student_recommendation(score: int) -> str:
-    if score >= 61:
+    if score >= 75:
+        return "Investigate repeated access activity before this student is cleared."
+    if score >= 50:
         return "Review this student's access activity before issuing a replacement pass."
     return "Monitor this student's next scan and confirm payment/access state."
 
 
 def examiner_recommendation(reasons: list[str]) -> str:
     if any("duplicate" in reason for reason in reasons):
-        return "Inspect duplicate scan cluster and confirm scanner handling procedure."
+        return "Inspect repeated scan cluster and confirm scanner handling procedure."
     if any("device" in reason or "IP" in reason for reason in reasons):
         return "Confirm device assignment and check whether scanner access was shared."
     return "Review examiner activity log."
@@ -316,7 +344,7 @@ def observations(
     )
     if duplicate_departments:
         dept, count = duplicate_departments.most_common(1)[0]
-        result.append(f"Duplicate attempts were concentrated in {dept} ({count} duplicate scans).")
+        result.append(f"Repeated attempts were concentrated in {dept} ({count} repeated scans).")
 
     if devices:
         top = devices[0]
@@ -354,6 +382,6 @@ def recommendations(students: list[dict], examiners: list[dict], devices: list[d
     if examiners:
         tips.append("Review examiner activity logs and scanner-device assignment.")
     if devices or ips:
-        tips.append("Check repeated device/IP patterns for shared-device or proxy behavior.")
+        tips.append("Check repeated scanner or network patterns for shared-device behavior.")
 
     return tips

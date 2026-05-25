@@ -27,7 +27,7 @@
         ['label' => 'Verification Logs', 'route' => route('admin.scan-logs')],
         ['label' => 'Examiners', 'route' => route('admin.examiners')],
     ];
-    $intelSource = $intelligenceReport['source_label'] ?? 'Live Summary';
+    $intelSource = $intelligenceReport['source_label'] ?? 'Live System Summary';
     $intelHighRisk = $intelligenceReport['high_risk_count'] ?? 0;
     $intelTotalScans = $intelligenceReport['total_scans'] ?? 0;
     $intelDuplicate = $intelligenceReport['duplicate_count'] ?? 0;
@@ -126,14 +126,14 @@
                 <b>{{ $intelSource }}</b>
                 <span>
                     {{ ($intelligenceReport['source'] ?? 'live') === 'python'
-                        ? 'Enhanced risk scoring is available for the current activity summary.'
-                        : 'Live database summary is available for current records.' }}
+                        ? 'Enhanced risk scoring is available for current activity.'
+                        : 'Current system activity is summarized from live records.' }}
                 </span>
             </div>
             <div class="dash-intel-metrics" aria-label="Risk intelligence summary">
                 <span class="dash-intel-chip mono">{{ number_format($intelTotalScans) }} scans</span>
-                <span class="dash-intel-chip mono">{{ number_format($intelDuplicate) }} duplicate</span>
-                <span class="dash-intel-chip mono">{{ number_format($intelHighRisk) }} high risk</span>
+                <span class="dash-intel-chip mono">{{ number_format($intelDuplicate) }} repeated</span>
+                <span class="dash-intel-chip mono">{{ number_format($intelHighRisk) }} review</span>
             </div>
         </div>
     </div>
@@ -165,10 +165,10 @@
             <div class="dash-panel-head"><h2>Risk / Review</h2><span>Needs attention</span></div>
             <div class="dash-panel-body">
                 <div class="dash-list">
-                    <div class="dash-row"><div><b>Duplicate attempts</b><span>Possible repeated scans.</span></div><strong class="mono">{{ number_format($riskMetrics['duplicate_scans'] ?? 0) }}</strong></div>
-                    <div class="dash-row"><div><b>Rejected scans</b><span>Invalid or revoked token activity.</span></div><strong class="mono">{{ number_format($riskMetrics['rejected_scans'] ?? 0) }}</strong></div>
+                    <div class="dash-row"><div><b>Repeated attempts</b><span>Possible repeated scans.</span></div><strong class="mono">{{ number_format($riskMetrics['duplicate_scans'] ?? 0) }}</strong></div>
+                    <div class="dash-row"><div><b>Rejected scans</b><span>Exam pass activity that needs review.</span></div><strong class="mono">{{ number_format($riskMetrics['rejected_scans'] ?? 0) }}</strong></div>
                     <div class="dash-row"><div><b>Missing photos</b><span>Students without identity photos.</span></div><strong class="mono">{{ number_format($riskMetrics['missing_passports'] ?? 0) }}</strong></div>
-                    <div class="dash-row"><div><b>Payment without QR</b><span>Paid students without token records.</span></div><strong class="mono">{{ number_format($riskMetrics['paid_without_qr'] ?? 0) }}</strong></div>
+                    <div class="dash-row"><div><b>Payment without pass</b><span>Paid students without issued exam passes.</span></div><strong class="mono">{{ number_format($riskMetrics['paid_without_qr'] ?? 0) }}</strong></div>
                     <div class="dash-row"><div><b>Inactive examiners</b><span>Disabled scanner accounts.</span></div><strong class="mono">{{ number_format($riskMetrics['inactive_examiners'] ?? 0) }}</strong></div>
                 </div>
             </div>
@@ -194,7 +194,7 @@
     <section class="dash-strip" aria-label="Admin overview">
         <div><span>Students</span><b>{{ number_format($metrics['students']) }}</b></div>
         <div><span>Payments</span><b>{{ number_format($metrics['payments_verified']) }}</b></div>
-        <div><span>QR Issued</span><b>{{ number_format($metrics['qr_issued']) }}</b></div>
+        <div><span>Exam Passes</span><b>{{ number_format($metrics['qr_issued']) }}</b></div>
         <div><span>Scans</span><b>{{ number_format($metrics['total_scans']) }}</b></div>
     </section>
 
@@ -229,7 +229,7 @@
             <div class="dash-list">
                 @forelse($recentLogs->take(6) as $log)
                     <div class="dash-row">
-                        <div><b>{{ $log->decision }} scan - {{ $log->student_name ?? 'Student unavailable' }}</b><span class="mono">{{ $log->matric_no ?? 'No matric' }} / {{ $log->timestamp }}</span></div>
+                        <div><b>{{ $log->decision === 'DUPLICATE' ? 'REPEATED' : $log->decision }} scan - {{ $log->student_name ?? 'Student unavailable' }}</b><span class="mono">{{ $log->matric_no ?? 'No matric' }} / {{ $log->timestamp }}</span></div>
                         <a class="admin-action ghost" href="{{ route('admin.scan-logs.show', $log->log_id) }}">View</a>
                     </div>
                 @empty

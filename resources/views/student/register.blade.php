@@ -297,13 +297,13 @@
             body: JSON.stringify(Object.fromEntries(new FormData(form))),
         });
 
-        const payload = await response.json().catch(() => ({ success: false, message: 'Registration failed.' }));
-        if (response.ok && payload.success && payload.redirect_url) {
-            window.location.href = payload.redirect_url;
+        const result = await response.json().catch(() => ({ success: false, message: 'Registration failed.' }));
+        if (response.ok && result.success && result.redirect_url) {
+            window.location.href = result.redirect_url;
             return;
         }
 
-        message.textContent = payload.message || 'Registration failed. Check your details and try again.';
+        message.textContent = result.message || 'Registration failed. Check your details and try again.';
         submitBtn.disabled = false;
         submitBtn.textContent = 'Open my Exam Dashboard';
     });

@@ -8,10 +8,6 @@ from pathlib import Path
 from typing import Any
 
 
-LOW_MAX = 30
-MEDIUM_MAX = 60
-
-
 def parse_timestamp(value: Any) -> datetime | None:
     """Parse common ISO-like timestamps without throwing on bad input."""
 
@@ -43,11 +39,13 @@ def normalize_status(value: Any) -> str:
 
 
 def risk_level(score: int) -> str:
-    if score <= LOW_MAX:
-        return "low"
-    if score <= MEDIUM_MAX:
+    if score >= 75:
+        return "critical"
+    if score >= 50:
+        return "high"
+    if score >= 25:
         return "medium"
-    return "high"
+    return "low"
 
 
 def percentage(part: int, total: int) -> float:

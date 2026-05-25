@@ -9,7 +9,7 @@
     @if($auditLogs->count())
         <div class="admin-timeline">
             @foreach($auditLogs as $event)
-                <div class="timeline-item"><div class="timeline-dot">A</div><div class="timeline-card"><b>{{ $event->action }}</b><span>{{ $event->actor_type }} #{{ $event->actor_id }} | {{ $event->timestamp }} | {{ $event->ip_address ?? 'No IP' }}</span>@if($event->scan_log_id)<span><a class="admin-action ghost" href="{{ route('admin.scan-logs.show', $event->scan_log_id) }}">View Scan</a></span>@endif</div></div>
+                <div class="timeline-item"><div class="timeline-dot">A</div><div class="timeline-card"><b>{{ $event->action }}</b><span>{{ $event->actor_type }} #{{ $event->actor_id }} | {{ $event->timestamp }}</span>@if($event->scan_log_id)<span><a class="admin-action ghost" href="{{ route('admin.scan-logs.show', $event->scan_log_id) }}">View Scan</a></span>@endif</div></div>
             @endforeach
         </div>
         <div style="margin-top:14px">{{ $auditLogs->links() }}</div>

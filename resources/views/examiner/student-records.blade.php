@@ -23,7 +23,7 @@
                         <th>Total</th>
                         <th>Approved</th>
                         <th>Rejected</th>
-                        <th>Duplicate</th>
+                        <th>Repeated</th>
                         <th>Last Scan</th>
                         <th>Action</th>
                     </tr>
@@ -38,7 +38,7 @@
                             <td data-label="Total">{{ $row['total_scans'] }}</td>
                             <td data-label="Approved">{{ $row['approved'] }}</td>
                             <td data-label="Rejected">{{ $row['rejected'] }}</td>
-                            <td data-label="Duplicate">{{ $row['duplicate'] }}</td>
+                            <td data-label="Repeated">{{ $row['duplicate'] }}</td>
                             <td data-label="Last Scan">{{ $row['last_scan_time'] }}</td>
                             <td data-label="Action">
                                 @if($row['detail_url'])

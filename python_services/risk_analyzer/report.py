@@ -37,6 +37,7 @@ def build_report(records: list[ScanRecord]) -> dict:
         "qr_issued": len({row.token_id for row in records if row.token_id != "unknown"}),
     }
     risk_overview = {
+        "critical_risk_students_count": sum(1 for item in students if item.get("risk_level") == "critical"),
         "high_risk_students_count": sum(1 for item in students if item.get("risk_level") == "high"),
         "medium_risk_students_count": sum(1 for item in students if item.get("risk_level") == "medium"),
         "suspicious_examiners_count": len(examiners),
@@ -57,10 +58,12 @@ def build_report(records: list[ScanRecord]) -> dict:
             "low": risk_counts.get("low", 0),
             "medium": risk_counts.get("medium", 0),
             "high": risk_counts.get("high", 0),
+            "critical": risk_counts.get("critical", 0),
         },
         "department_trends": department_trends,
         "level_trends": level_trends,
         "key_observations": daily_summary["key_observations"],
+        "student_risks": students,
         "high_risk_students": students,
         "suspicious_examiners": examiners,
         "suspicious_devices": devices,
@@ -70,6 +73,7 @@ def build_report(records: list[ScanRecord]) -> dict:
             "low": risk_counts.get("low", 0),
             "medium": risk_counts.get("medium", 0),
             "high": risk_counts.get("high", 0),
+            "critical": risk_counts.get("critical", 0),
             "overall_level": overall_level(students, examiners, devices, ips),
         },
         "recommendations": daily_summary["recommendations"],
@@ -96,7 +100,7 @@ def render_html(report: dict) -> str:
         ("Total scans", summary.get("total_scans", 0)),
         ("Approved", summary.get("approved_count", 0)),
         ("Rejected", summary.get("rejected_count", 0)),
-        ("Duplicate", summary.get("duplicate_count", 0)),
+        ("Repeated", summary.get("duplicate_count", 0)),
         ("Approval rate", f"{summary.get('approval_rate', 0)}%"),
         ("Overall risk", report.get("risk_summary", {}).get("overall_level", "low").title()),
     ]
@@ -133,7 +137,7 @@ def render_html(report: dict) -> str:
 <main>
   <header>
     <h1>CERNIX Intelligence Report</h1>
-    <p>Rule-based scan, examiner, device, IP, and payment/demo-mode risk analysis. Generated {escape(report.get("generated_at"))}.</p>
+    <p>Rule-based scan, examiner, scanner, network, and payment/demo-mode risk analysis. Generated {escape(report.get("generated_at"))}.</p>
     <div class="grid">{''.join(metric_card(label, value) for label, value in metrics)}</div>
   </header>
   <section>
@@ -157,7 +161,7 @@ def render_html(report: dict) -> str:
     {examiner_table(report.get("suspicious_examiners", []))}
   </section>
   <section>
-    <h2>Suspicious Devices/IPs</h2>
+    <h2>Scanner And Network Patterns</h2>
     {endpoint_table(report.get("suspicious_devices", []) + report.get("suspicious_ips", []))}
   </section>
   <section>
@@ -175,11 +179,13 @@ def overall_level(*groups: list[dict]) -> str:
     for group in groups:
         for item in group:
             score = max(score, int(item.get("score") or item.get("suspicious_score") or 0))
-    if score <= 30:
-        return "low"
-    if score <= 60:
+    if score >= 75:
+        return "critical"
+    if score >= 50:
+        return "high"
+    if score >= 25:
         return "medium"
-    return "high"
+    return "low"
 
 
 def metric_card(label: str, value: object) -> str:
@@ -188,7 +194,7 @@ def metric_card(label: str, value: object) -> str:
 
 def risk_distribution(dist: dict) -> str:
     return "<div class=\"grid\">" + "".join(
-        metric_card(label.title(), dist.get(label, 0)) for label in ("low", "medium", "high")
+        metric_card(label.title(), dist.get(label, 0)) for label in ("low", "medium", "high", "critical")
     ) + "</div>"
 
 
@@ -235,7 +241,7 @@ def trend_table(rows: list[dict], label: str) -> str:
         "</tr>"
         for row in rows
     )
-    return f"<table><thead><tr><th>{escape(label)}</th><th>Scans</th><th>Approved</th><th>Rejected</th><th>Duplicate</th><th>Duplicate rate</th><th>Rejection rate</th></tr></thead><tbody>{body}</tbody></table>"
+    return f"<table><thead><tr><th>{escape(label)}</th><th>Scans</th><th>Approved</th><th>Rejected</th><th>Repeated</th><th>Repeated rate</th><th>Rejection rate</th></tr></thead><tbody>{body}</tbody></table>"
 
 
 def student_table(rows: list[dict]) -> str:
@@ -273,7 +279,7 @@ def examiner_table(rows: list[dict]) -> str:
 
 def endpoint_table(rows: list[dict]) -> str:
     if not rows:
-        return '<div class="empty">No suspicious devices or IP addresses detected.</div>'
+        return '<div class="empty">No scanner or network risk pattern detected.</div>'
     body = "".join(
         "<tr>"
         f"<td>{escape(row.get('type'))}</td>"

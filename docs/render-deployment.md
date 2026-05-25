@@ -139,7 +139,7 @@ Open the Render URL and test:
 - Student registration with a private demo payment reference if `CERNIX_DEMO_MODE=true`
 - Admin/Super Admin cannot log into the Examiner portal
 - Examiner cannot log into the Admin portal
-- `/admin/intelligence` shows either a Python-enhanced report or a live Laravel summary
+- `/admin/intelligence` shows live scan-risk metrics immediately, and uses the Python-enhanced report only when that report is current
 
 ## 10. Security Notes
 

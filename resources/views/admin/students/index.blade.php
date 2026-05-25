@@ -9,6 +9,8 @@
     .student-name { display:block; color:var(--ink); font-weight:900; line-height:1.2; overflow-wrap:anywhere; }
     .student-sub { display:block; margin-top:4px; color:var(--ink-3); font-size:12px; }
     .student-actions { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+    .student-review { display:inline-flex; width:fit-content; padding:5px 9px; border-radius:999px; background:rgba(180,83,9,.12); color:var(--amber); font-size:11px; font-weight:900; letter-spacing:.05em; text-transform:uppercase; }
+    .student-review.clear { background:rgba(5,150,105,.1); color:var(--emerald); }
     @media (max-width:640px) {
         .student-row-id { min-width:220px; }
         .student-actions { justify-content:flex-start; }
@@ -30,7 +32,7 @@
     </div>
     <div class="admin-section-body">
         <form class="admin-filter" method="GET">
-            <input name="q" value="{{ request('q') }}" placeholder="Search name, matric, RRR">
+            <input name="q" value="{{ request('q') }}" placeholder="Search name, matric, payment reference">
             <select name="department">
                 <option value="">All departments</option>
                 @foreach($departments as $department)
@@ -56,7 +58,8 @@
                         <th>Department</th>
                         <th>Level</th>
                         <th>Payment</th>
-                        <th>QR</th>
+                        <th>Exam Pass</th>
+                        <th>Review</th>
                         <th>Registered</th>
                         <th>Action</th>
                     </tr>
@@ -70,6 +73,13 @@
                                 ->map(fn ($part) => strtoupper(substr($part, 0, 1)))
                                 ->implode('') ?: 'ST';
                             $tokenStatus = strtoupper((string) ($student->token_status ?? ''));
+                            $warning = $studentWarnings[$student->matric_no] ?? null;
+                            $passLabel = match ($tokenStatus) {
+                                'UNUSED' => 'Ready',
+                                'USED' => 'Scanned',
+                                'REVOKED' => 'Unavailable',
+                                default => $student->token_status ? \Illuminate\Support\Str::headline(strtolower($student->token_status)) : 'Missing',
+                            };
                         @endphp
                         <tr>
                             <td class="safe">
@@ -85,12 +95,19 @@
                             <td>{{ $student->dept_name ?? 'Not available' }}</td>
                             <td>{{ $student->level ?? 'Not available' }}</td>
                             <td><span class="admin-status {{ $student->verified_at ? 'green' : 'amber' }}">{{ $student->verified_at ? 'Verified' : 'Pending' }}</span></td>
-                            <td><span class="admin-status {{ $tokenStatus === 'UNUSED' ? 'green' : ($tokenStatus === 'USED' ? 'amber' : 'red') }}">{{ $student->token_status ?? 'Missing' }}</span></td>
+                            <td><span class="admin-status {{ $tokenStatus === 'UNUSED' ? 'green' : ($tokenStatus === 'USED' ? 'amber' : 'red') }}">{{ $passLabel }}</span></td>
+                            <td>
+                                @if($warning)
+                                    <span class="student-review">Needs Review</span>
+                                @else
+                                    <span class="student-review clear">Clear</span>
+                                @endif
+                            </td>
                             <td class="mono">{{ $student->created_at ? \Carbon\Carbon::parse($student->created_at)->format('M d, Y') : 'Not available' }}</td>
                             <td><div class="student-actions"><a class="admin-action ghost" href="{{ route('admin.students.show', ['student' => $student->matric_no]) }}">View</a></div></td>
                         </tr>
                     @empty
-                        <tr><td colspan="8"><div class="admin-empty">No registered students match this filter.</div></td></tr>
+                        <tr><td colspan="9"><div class="admin-empty">No registered students match this filter.</div></td></tr>
                     @endforelse
                 </tbody>
             </table>

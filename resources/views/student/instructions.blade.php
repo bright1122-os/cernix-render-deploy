@@ -11,7 +11,7 @@
             'Carry your institutional ID and your CERNIX Exam Access ID.',
             'Present the QR pass to the examiner for server-side verification.',
             'Use the venue shown in your timetable. Report errors before exam day.',
-            'Do not share or duplicate your QR pass. Duplicate scans are logged.',
+            'Do not share your QR pass. Repeated scans are logged for review.',
             'Follow all AAUA examination rules and malpractice regulations.',
         ] as $index => $instruction)
             <article class="cx-step">

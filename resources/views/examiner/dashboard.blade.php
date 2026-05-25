@@ -137,7 +137,7 @@
             <div>
                 <div class="verify-label">Verification Result</div>
                 <h2 class="verify-status" id="verifyStatus">USED</h2>
-                <p class="verify-message" id="verifyMessage">Token already redeemed - possible replay attempt.</p>
+                <p class="verify-message" id="verifyMessage">This exam pass has already been scanned.</p>
             </div>
         </div>
         <div class="verify-body">
@@ -146,17 +146,16 @@
                 <div class="safe">
                     <h3 class="verify-name" id="verifyName">Student unavailable</h3>
                     <div class="verify-meta" id="verifyMatric">Unavailable</div>
-                    <div style="margin-top:10px"><span class="ex-badge DUPLICATE" id="verifyBadge">DUPLICATE</span></div>
+                    <div style="margin-top:10px"><span class="ex-badge DUPLICATE" id="verifyBadge">REPEATED</span></div>
                 </div>
             </section>
             <section class="verify-details">
                 <div class="verify-detail"><span>Department</span><b id="verifyDepartment">Not available</b></div>
                 <div class="verify-detail"><span>Level</span><b id="verifyLevel">Not available</b></div>
-                <div class="verify-detail"><span>QR Status</span><b id="verifyQrStatus">Not available</b></div>
+                <div class="verify-detail"><span>Pass Status</span><b id="verifyQrStatus">Not available</b></div>
                 <div class="verify-detail"><span>Decision</span><b id="verifyDecision">Not available</b></div>
                 <div class="verify-detail"><span>Timestamp</span><b id="verifyTime">Not available</b></div>
                 <div class="verify-detail"><span>Examiner</span><b id="verifyExaminer">Not available</b></div>
-                <div class="verify-detail"><span>Token Ref</span><b class="ex-mono" id="verifyToken">Not available</b></div>
                 <div class="verify-detail"><span>Scan Count</span><b id="verifyCount">0</b></div>
             </section>
         </div>
@@ -209,12 +208,8 @@
     function statusMessage(status) {
         const theme = statusTheme(status);
         if (theme === 'approved') return 'Student verified successfully.';
-        if (theme === 'duplicate') return 'Token already redeemed - possible replay attempt.';
+        if (theme === 'duplicate') return 'This exam pass has already been scanned.';
         return 'Verification failed. Access denied.';
-    }
-    function shortToken(token) {
-        if (!token) return 'Not available';
-        return token.length > 14 ? `${token.slice(0, 8)}...${token.slice(-4)}` : token;
     }
     function photoUrl(path) {
         if (!path || /^https?:\/\//i.test(path) || path.includes('..')) return '/aaua-logo.png';
@@ -269,12 +264,12 @@
                 setConnection('server-down', 'Server unavailable — retry verification', 'The scanner can detect QR codes, but approval requires the server.');
                 return false;
             }
-            setConnection(slow ? 'slow' : 'online', slow ? 'Slow network — verification may take longer' : 'Online — verification server reachable', 'Server verification controls approval and token lifecycle.');
+            setConnection(slow ? 'slow' : 'online', slow ? 'Slow network — verification may take longer' : 'Online — verification server reachable', 'Server verification controls approval.');
             return true;
         } catch (_) {
             clearTimeout(timer);
             serverReachable = false;
-            setConnection('server-down', 'Server unavailable — retry verification', 'Token was not approved in this browser session. Retry when the server returns.');
+            setConnection('server-down', 'Server unavailable — retry verification', 'This pass was not approved in this browser session. Retry when the server returns.');
             return false;
         }
     }
@@ -402,11 +397,11 @@
         try {
             qrData = JSON.parse(rawData);
         } catch (_) {
-            const payload = { status: 'INVALID', student: null, token_id: null, timestamp: new Date().toISOString(), reason: 'Invalid QR payload.' };
-            renderResult(payload);
-            showVerificationOverlay(payload);
-            playResultSound(payload.status);
-            setState('Invalid QR payload. Waiting for another QR.');
+            const result = { status: 'INVALID', student: null, token_id: null, timestamp: new Date().toISOString(), reason: 'Invalid QR code.' };
+            renderResult(result);
+            showVerificationOverlay(result);
+            playResultSound(result.status);
+            setState('Invalid QR code. Waiting for another QR.');
             verifying = false;
             scanFrame.classList.remove('detected');
             return;
@@ -426,14 +421,14 @@
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
                 body: JSON.stringify({ qr_data: qrData })
             });
-            const payload = await response.json();
-            renderResult(payload);
-            showVerificationOverlay(payload);
-            playResultSound(payload.status);
+            const result = await response.json();
+            renderResult(result);
+            showVerificationOverlay(result);
+            playResultSound(result.status);
             setState('Verification complete. Close the result to scan another QR.');
             clearPending();
         } catch (_) {
-            const message = 'Verification failed due to network/server issue. Token was not consumed by this browser request. Retry verification when online.';
+            const message = 'Verification failed due to network/server issue. This pass was not approved by this browser request. Retry verification when online.';
             setPending(rawData, qrData, message);
             renderPendingResult(message);
             setState(message);
@@ -443,7 +438,7 @@
     }
     async function retryPendingVerification() {
         if (!pendingRawPayload || !pendingQrData) {
-            setState('No pending QR payload to retry.');
+            setState('No pending QR to retry.');
             return;
         }
         const ok = await updateConnectionStatus();
@@ -454,55 +449,65 @@
         setState('Retrying pending QR with the verification server...');
         await verifyQr(pendingRawPayload);
     }
-    function renderResult(payload) {
-        const status = normalizeStatus(payload.status);
-        const student = payload.student || {};
-        const detailLink = payload.detail_url
-            ? `<div style="margin-top:12px"><a class="ex-action secondary" href="${payload.detail_url}">View</a></div>`
+    function renderResult(result) {
+        const status = normalizeStatus(result.status);
+        const student = result.student || {};
+        const detailLink = result.detail_url
+            ? `<div style="margin-top:12px"><a class="ex-action secondary" href="${result.detail_url}">View</a></div>`
             : '';
         latestResult.innerHTML = `
             <div class="ex-record">
                 <div class="ex-record-top">
-                    <strong>${status}</strong>
-                    <span class="ex-badge ${status}">${status}</span>
+                    <strong>${decisionLabel(status)}</strong>
+                    <span class="ex-badge ${status}">${decisionLabel(status)}</span>
                 </div>
                 <div class="result-grid">
                     <div><span>Student</span><b>${student.full_name || 'Student unavailable'}</b></div>
                     <div><span>Matric</span><b class="ex-mono">${student.matric_no || 'Unavailable'}</b></div>
                     <div><span>Department</span><b>${student.department || 'Not available'}</b></div>
-                    <div><span>QR Status</span><b>${payload.token_status || status}</b></div>
-                    <div><span>Scans</span><b>${payload.scan_count || 0}</b></div>
-                    <div><span>Time</span><b>${new Date(payload.timestamp || Date.now()).toLocaleString()}</b></div>
+                    <div><span>Pass Status</span><b>${passStatusLabel(result.token_status || status)}</b></div>
+                    <div><span>Scans</span><b>${result.scan_count || 0}</b></div>
+                    <div><span>Time</span><b>${new Date(result.timestamp || Date.now()).toLocaleString()}</b></div>
                 </div>
                 ${detailLink}
             </div>`;
     }
-    function showVerificationOverlay(payload) {
-        const status = normalizeStatus(payload.status);
+    function showVerificationOverlay(result) {
+        const status = normalizeStatus(result.status);
         const theme = statusTheme(status);
-        const student = payload.student || {};
+        const student = result.student || {};
         verifyDocument.className = `verify-document ${theme}`;
         document.getElementById('verifyIcon').textContent = theme === 'approved' ? '✓' : (theme === 'duplicate' ? '!' : '×');
-        document.getElementById('verifyStatus').textContent = status;
+        document.getElementById('verifyStatus').textContent = decisionLabel(status);
         document.getElementById('verifyMessage').textContent = statusMessage(status);
         document.getElementById('verifyPhoto').src = photoUrl(student.photo_path);
         document.getElementById('verifyPhoto').onerror = () => { document.getElementById('verifyPhoto').src = '/aaua-logo.png'; };
         document.getElementById('verifyName').textContent = student.full_name || 'Student unavailable';
         document.getElementById('verifyMatric').textContent = student.matric_no || 'Unavailable';
         const badge = document.getElementById('verifyBadge');
-        badge.textContent = status;
+        badge.textContent = status === 'DUPLICATE' ? 'REPEATED' : status;
         badge.className = `ex-badge ${status}`;
         document.getElementById('verifyDepartment').textContent = student.department || 'Not available';
         document.getElementById('verifyLevel').textContent = student.level || 'Not available';
-        document.getElementById('verifyQrStatus').textContent = payload.token_status || status;
+        document.getElementById('verifyQrStatus').textContent = passStatusLabel(result.token_status || status);
         document.getElementById('verifyDecision').textContent = status;
-        document.getElementById('verifyTime').textContent = new Date(payload.timestamp || Date.now()).toLocaleString();
-        document.getElementById('verifyExaminer').textContent = payload.examiner || @json($examiner['full_name'] ?? 'Examiner');
-        document.getElementById('verifyToken').textContent = shortToken(payload.token_id);
-        document.getElementById('verifyCount').textContent = payload.scan_count || 0;
-        document.getElementById('verifyReviewLink').href = payload.detail_url || `{{ route('examiner.scan-history') }}${payload.trace_id ? '?highlight=' + encodeURIComponent(payload.trace_id) : ''}`;
+        document.getElementById('verifyTime').textContent = new Date(result.timestamp || Date.now()).toLocaleString();
+        document.getElementById('verifyExaminer').textContent = result.examiner || @json($examiner['full_name'] ?? 'Examiner');
+        document.getElementById('verifyCount').textContent = result.scan_count || 0;
+        document.getElementById('verifyReviewLink').href = result.detail_url || `{{ route('examiner.scan-history') }}${result.trace_id ? '?highlight=' + encodeURIComponent(result.trace_id) : ''}`;
         overlay.hidden = false;
         overlay.scrollTop = 0;
+    }
+    function passStatusLabel(value) {
+        const normalized = normalizeStatus(value);
+        if (normalized === 'UNUSED' || normalized === 'ACTIVE') return 'Ready';
+        if (normalized === 'USED' || normalized === 'DUPLICATE') return 'Already scanned';
+        if (normalized === 'REVOKED') return 'Unavailable';
+        if (normalized === 'APPROVED') return 'Approved';
+        return normalized;
+    }
+    function decisionLabel(status) {
+        return normalizeStatus(status) === 'DUPLICATE' ? 'REPEATED' : normalizeStatus(status);
     }
     function closeOverlay() {
         overlay.hidden = true;
@@ -527,3 +532,4 @@
     updateConnectionStatus();
 </script>
 @endpush
+

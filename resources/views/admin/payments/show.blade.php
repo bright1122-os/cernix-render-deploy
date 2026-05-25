@@ -13,7 +13,7 @@
     }
 @endphp
 <div class="admin-page-head">
-    <div><div class="cx-eyebrow">Payment Trace</div><h1 class="mono">{{ $payment->rrr_number }}</h1><p>Payment record, linked student, QR status, and scan summary.</p></div>
+    <div><div class="cx-eyebrow">Payment Trace</div><h1 class="mono">{{ $payment->rrr_number }}</h1><p>Payment record, linked student, exam pass status, and scan summary.</p></div>
     <a class="admin-action ghost" href="{{ route('admin.payments') }}">Back to Payments</a>
 </div>
 
@@ -40,10 +40,10 @@
 </div>
 
 <section class="metric-strip" style="margin-top:16px">
-    <div class="metric-cell"><span class="metric-label">QR Status</span><span class="metric-value">{{ $token->status ?? 'Missing' }}</span></div>
-    <div class="metric-cell"><span class="metric-label">Token Ref</span><span class="metric-value" style="font-size:13px">{{ $token ? Str::limit($token->token_id, 18) : 'Not available' }}</span></div>
+    <div class="metric-cell"><span class="metric-label">Exam Pass</span><span class="metric-value">{{ match(strtoupper((string) ($token->status ?? ''))) { 'UNUSED' => 'Ready', 'USED' => 'Already scanned', 'REVOKED' => 'Unavailable', default => $token->status ?? 'Missing' } }}</span></div>
+    <div class="metric-cell"><span class="metric-label">Issued</span><span class="metric-value" style="font-size:13px">{{ $token->issued_at ?? 'Not available' }}</span></div>
     <div class="metric-cell"><span class="metric-label">Approved</span><span class="metric-value">{{ $scanSummary['APPROVED'] ?? 0 }}</span></div>
-    <div class="metric-cell"><span class="metric-label">Duplicate/Rejected</span><span class="metric-value">{{ ($scanSummary['DUPLICATE'] ?? 0) + ($scanSummary['REJECTED'] ?? 0) }}</span></div>
+    <div class="metric-cell"><span class="metric-label">Review Scans</span><span class="metric-value">{{ ($scanSummary['DUPLICATE'] ?? 0) + ($scanSummary['REJECTED'] ?? 0) }}</span></div>
 </section>
 
 @include('admin.partials.notes', ['entityType' => 'payment', 'entityId' => $payment->rrr_number, 'notes' => $notes ?? collect()])

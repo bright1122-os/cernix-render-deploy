@@ -44,15 +44,15 @@
                 <p class="muted">{{ $student->dept_name ?? 'Department unavailable' }} · {{ $student->level ?? 'Not available' }} Level</p>
             </div>
         </div>
-        <span class="chip {{ $decisionClass }}">{{ $scan->decision }}</span>
+        <span class="chip {{ $decisionClass }}">{{ $scan->decision === 'DUPLICATE' ? 'REPEATED' : $scan->decision }}</span>
     </section>
 
     <section class="access-strip">
         <div><span>Total</span><b>{{ $studentScans->count() }}</b></div>
         <div><span>Approved</span><b>{{ $counts['APPROVED'] ?? 0 }}</b></div>
         <div><span>Rejected</span><b>{{ $counts['REJECTED'] ?? 0 }}</b></div>
-        <div><span>Duplicate</span><b>{{ $counts['DUPLICATE'] ?? 0 }}</b></div>
-        <div><span>Token</span><b>{{ Str::limit($scan->token_id, 12) }}</b></div>
+        <div><span>Repeated</span><b>{{ $counts['DUPLICATE'] ?? 0 }}</b></div>
+        <div><span>Latest</span><b>{{ $scan->decision === 'DUPLICATE' ? 'REPEATED' : $scan->decision }}</b></div>
     </section>
 
     <div class="access-grid">
@@ -61,8 +61,8 @@
             <div class="access-panel-body">
                 <div class="access-row"><span class="access-label">Timestamp</span><span class="access-value mono">{{ $scan->timestamp }}</span></div>
                 <div class="access-row"><span class="access-label">Examiner</span><span class="access-value">{{ $scan->examiner_name ?? $scan->examiner_username ?? 'Not available' }}</span></div>
-                <div class="access-row"><span class="access-label">QR Status</span><span class="access-value">{{ $scan->token_status ?? 'Not available' }}</span></div>
-                <div class="access-row"><span class="access-label">Device / IP</span><span class="access-value">{{ $scan->device_fp ?? 'Not available' }} · {{ $scan->ip_address ?? 'Not available' }}</span></div>
+                <div class="access-row"><span class="access-label">Pass Status</span><span class="access-value">{{ match(strtoupper((string) ($scan->token_status ?? ''))) { 'UNUSED' => 'Ready', 'USED' => 'Already scanned', 'REVOKED' => 'Unavailable', default => $scan->token_status ?? 'Not available' } }}</span></div>
+                <div class="access-row"><span class="access-label">Review Status</span><span class="access-value">{{ $scan->decision === 'DUPLICATE' ? 'Repeated scan recorded' : 'Recorded' }}</span></div>
             </div>
         </section>
 
@@ -71,7 +71,7 @@
             <div class="access-panel-body">
                 @forelse($studentScans->take(8) as $row)
                     <div class="access-row">
-                        <span class="access-label">{{ $row->decision }} · {{ $row->examiner_name ?? $row->examiner_username ?? 'Not available' }}</span>
+                        <span class="access-label">{{ $row->decision === 'DUPLICATE' ? 'REPEATED' : $row->decision }} · {{ $row->examiner_name ?? $row->examiner_username ?? 'Not available' }}</span>
                         <span class="access-value mono">{{ $row->timestamp }}</span>
                         <a class="btn btn-ghost" style="width:max-content" href="{{ route('student.scans.show', $row->log_id) }}">View</a>
                     </div>

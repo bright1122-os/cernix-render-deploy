@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\RiskIntelligenceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -121,11 +122,146 @@ class AdminManagementWebTest extends TestCase
             ->assertOk()
             ->assertSee('Risk Intelligence')
             ->assertSee('Total Scans')
+            ->assertDontSee('QR token')
+            ->assertDontSee('Token Reference')
+            ->assertDontSee('Token Ref')
+            ->assertDontSee('Token Status')
             ->assertDontSee('JSON Path')
             ->assertDontSee('HTML Report Path')
             ->assertDontSee('storage/app/risk-analysis')
             ->assertDontSee('php artisan cernix')
             ->assertDontSee('python_services/risk_analyzer');
+    }
+
+    public function test_live_risk_intelligence_detects_repeated_student_scan(): void
+    {
+        $student = $this->createStudentRecord();
+        $this->addDuplicateScanAttempts($student['token_id'], $student['examiner_id']);
+
+        $model = app(RiskIntelligenceService::class)->viewModel();
+        $riskRows = collect($model['high_risk_students'] ?? []);
+        $studentRisk = $riskRows->firstWhere('matric_no', $student['matric_no']);
+
+        $this->assertSame('live', $model['source']);
+        $this->assertGreaterThanOrEqual(3, $model['summary']['total_scans']);
+        $this->assertGreaterThanOrEqual(2, $model['summary']['duplicate_count']);
+        $this->assertNotNull($studentRisk);
+        $this->assertGreaterThan(0, $studentRisk['score']);
+        $this->assertGreaterThanOrEqual(2, $studentRisk['duplicate_count']);
+        $this->assertNotEmpty($studentRisk['reasons']);
+    }
+
+    public function test_admin_intelligence_page_displays_live_repeated_scan_risk(): void
+    {
+        $admin = DB::table('examiners')->where('username', 'admin1')->first();
+        $student = $this->createStudentRecord();
+        $this->addDuplicateScanAttempts($student['token_id'], $student['examiner_id']);
+
+        $this->withSession($this->adminSession($admin))
+            ->get(route('admin.intelligence'))
+            ->assertOk()
+            ->assertSee('Live System Summary')
+            ->assertSee($student['full_name'])
+            ->assertSee($student['matric_no'])
+            ->assertSee('repeated scan attempt')
+            ->assertSee('What happened')
+            ->assertSee('Recommended action')
+            ->assertSee('View Student')
+            ->assertDontSee('QR token')
+            ->assertDontSee('Token Reference')
+            ->assertDontSee('127.0.0.1')
+            ->assertDontSee('JSON Path')
+            ->assertDontSee('HTML Report Path')
+            ->assertDontSee('storage/app/risk-analysis')
+            ->assertDontSee('php artisan cernix')
+            ->assertDontSee('python_services/risk_analyzer');
+    }
+
+    public function test_admin_dashboard_risk_card_uses_live_duplicate_metrics(): void
+    {
+        $admin = DB::table('examiners')->where('username', 'admin1')->first();
+        $student = $this->createStudentRecord();
+        $this->addDuplicateScanAttempts($student['token_id'], $student['examiner_id']);
+
+        $this->withSession($this->adminSession($admin))
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Live System Summary')
+            ->assertSee('3 scans')
+            ->assertSee('2 repeated');
+    }
+
+    public function test_student_warning_badges_and_profile_review_card_render(): void
+    {
+        $admin = DB::table('examiners')->where('username', 'admin1')->first();
+        $student = $this->createStudentRecord();
+        $this->addDuplicateScanAttempts($student['token_id'], $student['examiner_id']);
+
+        $this->withSession($this->adminSession($admin))
+            ->get(route('admin.students'))
+            ->assertOk()
+            ->assertSee('Needs Review')
+            ->assertSee($student['full_name'])
+            ->assertSee($student['matric_no'])
+            ->assertDontSee('Token Reference')
+            ->assertDontSee('Token Ref')
+            ->assertDontSee('127.0.0.1');
+
+        $this->withSession($this->adminSession($admin))
+            ->get(route('admin.students.show', ['student' => $student['matric_no']]))
+            ->assertOk()
+            ->assertSee('Review Status')
+            ->assertSee('Repeated Scans')
+            ->assertSee('This exam pass was scanned again')
+            ->assertDontSee('Token Reference')
+            ->assertDontSee('127.0.0.1');
+    }
+
+    public function test_examiner_warning_appears_without_network_or_token_details(): void
+    {
+        $super = DB::table('examiners')->where('username', 'superadmin')->first();
+        $student = $this->createStudentRecord();
+        $this->addDuplicateScanAttempts($student['token_id'], $student['examiner_id']);
+
+        $this->withSession($this->adminSession($super))
+            ->get(route('admin.examiners'))
+            ->assertOk()
+            ->assertSee('Needs Review')
+            ->assertSee('Repeated')
+            ->assertDontSee('Token Reference')
+            ->assertDontSee('127.0.0.1');
+
+        $this->withSession($this->adminSession($super))
+            ->get(route('admin.examiners.show', ['examiner' => $student['examiner_id']]))
+            ->assertOk()
+            ->assertSee('Review Status')
+            ->assertSee('Repeated Scans')
+            ->assertSee('repeated scan attempts recorded')
+            ->assertDontSee('Token Reference')
+            ->assertDontSee('127.0.0.1');
+    }
+
+    public function test_admin_scan_log_pages_hide_token_numbers_and_raw_ip_by_default(): void
+    {
+        $admin = DB::table('examiners')->where('username', 'admin1')->first();
+        $student = $this->createStudentRecord();
+        $this->addDuplicateScanAttempts($student['token_id'], $student['examiner_id']);
+        $logId = DB::table('verification_logs')->orderByDesc('log_id')->value('log_id');
+
+        $this->withSession($this->adminSession($admin))
+            ->get(route('admin.scan-logs'))
+            ->assertOk()
+            ->assertSee('Review Status')
+            ->assertDontSee('Token')
+            ->assertDontSee('127.0.0.1');
+
+        $this->withSession($this->adminSession($admin))
+            ->get(route('admin.scan-logs.show', ['log' => $logId]))
+            ->assertOk()
+            ->assertSee('Exam Pass')
+            ->assertSee('Repeated scan needs review')
+            ->assertDontSee('Token Reference')
+            ->assertDontSee('127.0.0.1');
     }
 
     private function adminSession(object $account): array
@@ -193,6 +329,27 @@ class AdminManagementWebTest extends TestCase
             'ip_address' => '127.0.0.1',
         ]);
 
-        return $student;
+        return $student + [
+            'token_id' => $token,
+            'examiner_id' => (int) $examiner->examiner_id,
+        ];
+    }
+
+    private function addDuplicateScanAttempts(string $tokenId, int $examinerId): void
+    {
+        DB::table('qr_tokens')
+            ->where('token_id', $tokenId)
+            ->update(['status' => 'USED', 'used_at' => now()->subMinutes(2)]);
+
+        foreach ([90, 30] as $secondsAgo) {
+            DB::table('verification_logs')->insert([
+                'token_id' => $tokenId,
+                'examiner_id' => $examinerId,
+                'decision' => 'DUPLICATE',
+                'timestamp' => now()->subSeconds($secondsAgo),
+                'device_fp' => 'test-device',
+                'ip_address' => '127.0.0.1',
+            ]);
+        }
     }
 }

@@ -5,8 +5,8 @@
 @section('student-content')
 <div class="cx-page-head">
     <div class="cx-eyebrow">Official Pass</div>
-    <h1>QR Generator / Exam Access ID</h1>
-    <p>This single card contains the student identity, payment proof, active QR access, next exam, and security footer.</p>
+    <h1>Exam Access ID</h1>
+    <p>This official pass contains the student identity, payment status, QR access, and next exam details.</p>
 </div>
 @include('student.partials.exam-access-id')
 <div class="no-print" style="width:min(520px,100%);margin:18px auto 0;display:flex;gap:10px;flex-wrap:wrap">

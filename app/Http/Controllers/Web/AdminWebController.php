@@ -93,7 +93,7 @@ class AdminWebController extends Controller
                         ->select(DB::raw(1))
                         ->from('qr_tokens')
                         ->whereColumn('qr_tokens.student_id', 'students.matric_no')
-                        ->where('qr_tokens.token_id', 'like', $q)));
+                        ->where('qr_tokens.status', 'like', $q)));
             })
             ->when($request->filled('department'), fn ($query) => $query->where('departments.dept_name', $request->input('department')))
             ->when($request->filled('level'), fn ($query) => $query->where('students.level', $request->input('level')))
@@ -103,8 +103,9 @@ class AdminWebController extends Controller
 
         $departments = DB::table('departments')->orderBy('dept_name')->pluck('dept_name');
         $levels = DB::table('students')->whereNotNull('level')->distinct()->orderBy('level')->pluck('level');
+        $studentWarnings = app(RiskIntelligenceService::class)->getStudentsNeedingReview();
 
-        return view('admin.students.index', compact('students', 'departments', 'levels'));
+        return view('admin.students.index', compact('students', 'departments', 'levels', 'studentWarnings'));
     }
 
     public function studentShow(Request $request, string $matricNo)
@@ -153,7 +154,7 @@ class AdminWebController extends Controller
 
         $timeline = collect([
             $payment ? ['label' => 'Payment verified', 'time' => $payment->verified_at, 'meta' => $payment->rrr_number] : null,
-            $token ? ['label' => 'QR token issued', 'time' => $token->issued_at, 'meta' => $this->shortToken($token->token_id)] : null,
+            $token ? ['label' => 'Exam pass issued', 'time' => $token->issued_at, 'meta' => $token->status] : null,
             $timetableCount > 0 ? ['label' => 'Timetable assigned', 'time' => $student->created_at, 'meta' => $timetableCount . ' timetable entries'] : null,
         ])->filter()->merge($scanHistory->take(8)->map(fn ($log) => [
             'label' => $log->decision . ' scan',
@@ -162,8 +163,9 @@ class AdminWebController extends Controller
         ]))->sortByDesc('time')->values();
 
         $notes = $this->adminNotes('student', $matricNo);
+        $studentWarning = app(RiskIntelligenceService::class)->getStudentWarning($matricNo);
 
-        return view('admin.students.show', compact('student', 'payment', 'token', 'timetableCount', 'scanHistory', 'scanCounts', 'latestScan', 'timeline', 'notes'));
+        return view('admin.students.show', compact('student', 'payment', 'token', 'timetableCount', 'scanHistory', 'scanCounts', 'latestScan', 'timeline', 'notes', 'studentWarning'));
     }
 
     public function examiners(Request $request)
@@ -197,8 +199,9 @@ class AdminWebController extends Controller
 
         $permissions = $this->permissionSummary($request);
         $currentAdminId = (int) $request->session()->get('examiner_id');
+        $examinerWarnings = app(RiskIntelligenceService::class)->getExaminersNeedingReview();
 
-        return view('admin.examiners.index', compact('examiners', 'permissions', 'currentAdminId'));
+        return view('admin.examiners.index', compact('examiners', 'permissions', 'currentAdminId', 'examinerWarnings'));
     }
 
     public function examinerShow(Request $request, int $examiner)
@@ -246,8 +249,9 @@ class AdminWebController extends Controller
             ->get();
 
         $notes = $this->adminNotes('examiner', (string) $examiner);
+        $examinerWarning = app(RiskIntelligenceService::class)->getExaminerWarning($examiner);
 
-        return view('admin.examiners.show', ['examiner' => $record, 'history' => $history, 'audit' => $audit, 'notes' => $notes]);
+        return view('admin.examiners.show', ['examiner' => $record, 'history' => $history, 'audit' => $audit, 'notes' => $notes, 'examinerWarning' => $examinerWarning]);
     }
 
     public function examinerStore(Request $request): RedirectResponse
@@ -575,17 +579,17 @@ class AdminWebController extends Controller
         ];
         $verificationRules = [
             'One-time QR verification' => 'Enabled',
-            'Duplicate scan detection' => 'Enabled',
+            'Repeated scan detection' => 'Enabled',
             'Server verification required' => 'Enabled',
-            'AES/HMAC secrets exposed' => 'Disabled',
+            'Security keys exposed' => 'Disabled',
         ];
         $scannerStatus = [
             'Recommended camera' => 'Back camera / environment mode',
             'Scanner viewport' => 'Responsive 3:4 passport-aware identity review and large QR capture area',
             'Scan lock' => 'Enabled while server verification is pending',
             'Offline retry mode' => 'Pending verification only',
-            'Token consumption offline' => 'Disabled',
-            'Server verification endpoint' => url('/examiner/verify'),
+            'Offline pass approval' => 'Disabled',
+            'Server verification' => 'Connected',
         ];
         $accessOverview = $this->accessOverview($request);
         $settingsStorageReady = Schema::hasTable('cernix_settings');
@@ -946,7 +950,7 @@ class AdminWebController extends Controller
             ['label' => 'Active session set', 'ok' => (bool) $activeSession],
             ['label' => 'Students registered', 'ok' => $metrics['students'] > 0],
             ['label' => 'Payments verified', 'ok' => $metrics['payments_verified'] > 0],
-            ['label' => 'QR tokens issued', 'ok' => $metrics['qr_issued'] > 0],
+            ['label' => 'Exam passes issued', 'ok' => $metrics['qr_issued'] > 0],
             ['label' => 'Today timetable available', 'ok' => $metrics['today_exams'] > 0],
             ['label' => 'Examiners configured', 'ok' => $metrics['examiners'] > 0],
             ['label' => 'Audit logging active', 'ok' => $this->safeCount('audit_log') > 0],
@@ -961,10 +965,10 @@ class AdminWebController extends Controller
             $alerts->push(['level' => 'amber', 'title' => $metrics['duplicate'] . ' duplicate attempts', 'meta' => 'Review verification logs for possible replay attempts.']);
         }
         if ($metrics['rejected'] > 0) {
-            $alerts->push(['level' => 'red', 'title' => $metrics['rejected'] . ' rejected scans', 'meta' => 'Inspect invalid or revoked token activity.']);
+            $alerts->push(['level' => 'red', 'title' => $metrics['rejected'] . ' rejected scans', 'meta' => 'Inspect rejected exam pass activity.']);
         }
         if ($metrics['payments_verified'] > $metrics['qr_issued']) {
-            $alerts->push(['level' => 'amber', 'title' => 'Payments exceed issued QR tokens', 'meta' => 'Some paid students may not have an access token yet.']);
+            $alerts->push(['level' => 'amber', 'title' => 'Payments exceed issued exam passes', 'meta' => 'Some paid students may not have an exam pass yet.']);
         }
         if ($metrics['students'] > 0 && $metrics['today_exams'] === 0) {
             $alerts->push(['level' => 'amber', 'title' => 'No exams scheduled today', 'meta' => 'Timetable page has the complete schedule.']);

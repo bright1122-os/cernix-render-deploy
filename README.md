@@ -16,7 +16,7 @@ Manual exam access checks can lead to slow queues, copied slips, weak payment-cl
 
 - Controlled student registration and generated matric validation.
 - Department-based fee amount checks.
-- Server-side QR verification and one-time token lifecycle control.
+- Server-side QR verification and one-time exam pass control.
 - Examiner scan decisions with audit logs.
 - Admin/Super Admin oversight and risk intelligence.
 
@@ -59,8 +59,8 @@ Manual exam access checks can lead to slow queues, copied slips, weak payment-cl
 - Located at `python_services/risk_analyzer/`.
 - Analyzes exported scan/payment/audit-style JSON data.
 - Produces risk scoring, suspicious student/examiner/device/IP findings, summary observations, recommendations, JSON reports, and optional HTML reports.
-- Feeds the Admin Risk Intelligence page when a generated report exists.
-- Does not handle authentication, QR verification, payment verification, cryptographic secrets, scanner verification, or token lifecycle logic.
+- Provides deeper optional analysis for the Admin Risk Intelligence page. The Admin UI still calculates a live database summary from current scan logs even when no Python report has been generated.
+- Does not handle authentication, QR verification, payment verification, cryptographic secrets, scanner verification, or exam pass approval logic.
 
 ## Tech Stack
 
@@ -131,7 +131,7 @@ Generate a report for the Admin Intelligence page:
 php artisan cernix:run-risk-analysis
 ```
 
-Reports are written under `storage/app/risk-analysis/`. The web UI reads the JSON report safely. If the Python report is missing, `/admin/intelligence` still shows a live Laravel summary from current database records.
+Reports are written under `storage/app/risk-analysis/`. The web UI reads the JSON report safely when it is current. If the Python report is missing or older than the latest scan log, `/admin/intelligence` shows a live Laravel summary from current database records.
 
 ## Testing
 

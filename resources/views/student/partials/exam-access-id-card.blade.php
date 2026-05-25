@@ -2,7 +2,7 @@
     $status = strtoupper($token->status ?? 'UNAVAILABLE');
     $badge = match ($status) {
         'UNUSED' => 'ACTIVE',
-        'USED' => 'USED',
+        'USED' => 'SCANNED',
         'REVOKED' => 'REVOKED',
         default => 'PENDING',
     };
@@ -12,7 +12,12 @@
         'REVOKED' => 'is-revoked',
         default => 'is-pending',
     };
-    $tokenRef = $token?->token_id ? substr($token->token_id, 0, 8) . '...' . substr($token->token_id, -4) : 'Not available';
+    $passStatus = match ($status) {
+        'UNUSED' => 'Ready',
+        'USED' => 'Already scanned',
+        'REVOKED' => 'Unavailable',
+        default => 'Pending',
+    };
     $issuedAt = $token?->issued_at ? \Illuminate\Support\Carbon::parse($token->issued_at)->format('d M, H:i') : 'Not available';
     $verifiedAt = $payment?->verified_at ? \Illuminate\Support\Carbon::parse($payment->verified_at)->format('d M, H:i') : 'Not available';
     $paymentValue = $payment ? 'Verified · ₦' . number_format($payment->amount_confirmed) : 'Not available';
@@ -312,13 +317,13 @@
             <div class="detail-item is-wide"><span>Payment</span><b>{{ $paymentValue }}</b></div>
             <div class="detail-item"><span>RRR</span><b class="mono">{{ $payment->rrr_number ?? 'Not available' }}</b></div>
             <div class="detail-item"><span>Verified</span><b>{{ $verifiedAt }}</b></div>
-            <div class="detail-item"><span>QR</span><b>{{ ucfirst(strtolower($status)) }} · {{ $issuedAt }}</b></div>
-            <div class="detail-item"><span>Token</span><b class="mono">{{ $tokenRef }}</b></div>
+            <div class="detail-item"><span>Pass Status</span><b>{{ $passStatus }}</b></div>
+            <div class="detail-item"><span>Issued</span><b>{{ $issuedAt }}</b></div>
         </section>
     </div>
 
     <footer class="id-foot">
         <div><b>AAUA Verified</b> · {{ $generatedAt->format('d M Y, H:i') }}</div>
-        <div>AES-256-GCM · HMAC-SHA256 · One-time QR</div>
+        <div>Secure server verification · One-time QR check</div>
     </footer>
 </article>

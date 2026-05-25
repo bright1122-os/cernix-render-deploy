@@ -124,7 +124,7 @@
 
     <footer class="footer-meta">
         <span>CERNIX v1.0 · Secured exam access system</span>
-        <span>AES-256-GCM · HMAC-SHA256 · One-time QR verification</span>
+        <span>Secure server verification · One-time QR check</span>
     </footer>
 </main>
 @endsection

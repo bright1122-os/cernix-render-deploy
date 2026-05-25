@@ -10,6 +10,7 @@ class RiskIntelligenceService
 {
     private string $jsonPath;
     private string $htmlPath;
+    private ?array $cachedViewModel = null;
 
     public function __construct()
     {
@@ -19,20 +20,30 @@ class RiskIntelligenceService
 
     public function viewModel(): array
     {
-        $python = $this->loadPythonReport();
-
-        if (($python['usable'] ?? false) === true) {
-            return $python['model'];
+        if ($this->cachedViewModel !== null) {
+            return $this->cachedViewModel;
         }
 
+        $python = $this->loadPythonReport();
         $fallback = $this->liveLaravelSummary();
 
-        if (($python['error'] ?? null) !== null) {
-            $fallback['notice'] = 'Risk report exists but could not be parsed. Showing live Laravel summary instead.';
-            $fallback['error'] = $python['error'];
+        if (($python['usable'] ?? false) === true && $this->pythonReportIsCurrent($python['model'], $fallback)) {
+            return $this->cachedViewModel = $python['model'];
         }
 
-        return $fallback;
+        if (($python['error'] ?? null) !== null) {
+            $fallback['notice'] = 'Enhanced analysis could not be read. Showing the current system summary instead.';
+            $fallback['error'] = $python['error'];
+        } elseif (($python['usable'] ?? false) === true) {
+            $fallback['notice'] = 'Current activity is shown from live system records. Enhanced trend analysis will appear after it is refreshed.';
+        }
+
+        return $this->cachedViewModel = $fallback;
+    }
+
+    public function getIntelligenceViewModel(): array
+    {
+        return $this->viewModel();
     }
 
     public function dashboardSummary(): array
@@ -47,8 +58,87 @@ class RiskIntelligenceService
             'generated_at' => $model['generated_at'],
             'total_scans' => (int) ($model['summary']['total_scans'] ?? 0),
             'duplicate_count' => (int) ($model['summary']['duplicate_count'] ?? 0),
-            'high_risk_count' => (int) ($model['risk_overview']['high_risk_students_count'] ?? 0),
+            'high_risk_count' => (int) (($model['risk_overview']['critical_risk_students_count'] ?? 0) + ($model['risk_overview']['high_risk_students_count'] ?? 0)),
         ];
+    }
+
+    public function getDashboardSummary(): array
+    {
+        return $this->dashboardSummary();
+    }
+
+    public function getWarningCounts(): array
+    {
+        $model = $this->viewModel();
+        $students = collect($model['student_risks'] ?? []);
+        $examiners = collect($model['suspicious_examiners'] ?? []);
+        $activeReviewItems = $students->count() + $examiners->count();
+
+        return [
+            'students' => $students->count(),
+            'examiners' => $examiners->count(),
+            'risk' => $activeReviewItems,
+            'critical_or_high' => $students
+                ->filter(fn ($row) => in_array($row['risk_level'] ?? '', ['critical', 'high'], true))
+                ->count(),
+        ];
+    }
+
+    public function getStudentsNeedingReview(): array
+    {
+        return collect($this->viewModel()['student_risks'] ?? [])
+            ->keyBy('matric_no')
+            ->all();
+    }
+
+    public function getExaminersNeedingReview(): array
+    {
+        return collect($this->viewModel()['suspicious_examiners'] ?? [])
+            ->keyBy(fn ($row) => (string) ($row['examiner_id'] ?? ''))
+            ->all();
+    }
+
+    public function getStudentWarning(string|object $student): array
+    {
+        $matric = is_object($student) ? (string) ($student->matric_no ?? '') : (string) $student;
+        $row = $this->getStudentsNeedingReview()[$matric] ?? null;
+
+        return $this->warningShape($row, 'No warning activity found for this student.');
+    }
+
+    public function getExaminerWarning(string|int|object $examiner): array
+    {
+        $id = is_object($examiner) ? (string) ($examiner->examiner_id ?? '') : (string) $examiner;
+        $row = $this->getExaminersNeedingReview()[$id] ?? null;
+
+        return $this->warningShape($row, 'No suspicious examiner activity detected.');
+    }
+
+    private function pythonReportIsCurrent(array $pythonModel, array $liveModel): bool
+    {
+        $pythonTotal = (int) ($pythonModel['summary']['total_scans'] ?? 0);
+        $liveTotal = (int) ($liveModel['summary']['total_scans'] ?? 0);
+
+        if ($liveTotal === 0) {
+            return true;
+        }
+
+        if ($pythonTotal < $liveTotal) {
+            return false;
+        }
+
+        $latestScan = $this->latestScanTimestamp();
+        $generatedAt = $pythonModel['generated_at'] ?? null;
+
+        if (! $latestScan || ! $generatedAt) {
+            return false;
+        }
+
+        try {
+            return \Carbon\Carbon::parse($generatedAt)->greaterThanOrEqualTo(\Carbon\Carbon::parse($latestScan));
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private function loadPythonReport(): array
@@ -74,34 +164,39 @@ class RiskIntelligenceService
     {
         $summarySource = is_array($data['summary'] ?? null) ? $data['summary'] : $data;
         $overviewSource = is_array($data['risk_overview'] ?? null) ? $data['risk_overview'] : [];
-        $students = collect($data['high_risk_students'] ?? [])->map(fn ($row) => $this->studentRow((array) $row))->values()->all();
+        $students = collect($data['student_risks'] ?? $data['high_risk_students'] ?? [])->map(fn ($row) => $this->studentRow((array) $row))->values()->all();
         $examiners = collect($data['suspicious_examiners'] ?? [])->map(fn ($row) => $this->examinerRow((array) $row))->values()->all();
         $devices = collect($data['suspicious_devices'] ?? [])->map(fn ($row) => $this->deviceRow((array) $row, 'device'))->values()->all();
         $ips = collect($data['suspicious_ips'] ?? [])->map(fn ($row) => $this->deviceRow((array) $row, 'ip'))->values()->all();
+        $criticalRiskStudents = collect($students)->where('risk_level', 'critical')->count();
         $highRiskStudents = collect($students)->where('risk_level', 'high')->count();
+        $mediumRiskStudents = collect($students)->where('risk_level', 'medium')->count();
 
         return [
             'source' => 'python',
-            'source_label' => 'Python Enhanced',
+            'source_label' => 'Enhanced Analysis',
             'status' => $highRiskStudents > 0 ? 'Review needed' : 'Monitoring',
             'notice' => null,
             'error' => null,
             'generated_at' => $data['generated_at'] ?? $summarySource['generated_at'] ?? null,
             'last_updated_label' => $this->formatTimestamp($data['generated_at'] ?? $summarySource['generated_at'] ?? null),
-            'freshness_label' => 'Source: Python-enhanced report',
+            'freshness_label' => 'Source: Enhanced analysis',
             'summary' => $this->summaryShape($summarySource),
             'risk_overview' => [
+                'critical_risk_students_count' => (int) ($overviewSource['critical_risk_students_count'] ?? $criticalRiskStudents),
                 'high_risk_students_count' => (int) ($overviewSource['high_risk_students_count'] ?? $highRiskStudents),
+                'medium_risk_students_count' => (int) ($overviewSource['medium_risk_students_count'] ?? $mediumRiskStudents),
                 'suspicious_examiners_count' => (int) ($overviewSource['suspicious_examiners_count'] ?? count($examiners)),
                 'suspicious_devices_count' => (int) ($overviewSource['suspicious_devices_count'] ?? count($devices)),
                 'suspicious_ips_count' => (int) ($overviewSource['suspicious_ips_count'] ?? count($ips)),
                 'duplicate_attempts' => (int) ($summarySource['duplicate_count'] ?? 0),
                 'rejected_attempts' => (int) ($summarySource['rejected_count'] ?? 0),
             ],
-            'risk_distribution' => $data['risk_distribution'] ?? $data['risk_summary'] ?? ['low' => 0, 'medium' => 0, 'high' => $highRiskStudents],
+            'risk_distribution' => $data['risk_distribution'] ?? $data['risk_summary'] ?? ['low' => 0, 'medium' => $mediumRiskStudents, 'high' => $highRiskStudents, 'critical' => $criticalRiskStudents],
             'department_trends' => $this->trendRows($data['department_trends'] ?? []),
             'level_trends' => $this->trendRows($data['level_trends'] ?? []),
             'key_observations' => $this->nonEmptyList($data['key_observations'] ?? data_get($data, 'daily_summary.key_observations') ?? []),
+            'student_risks' => $students,
             'high_risk_students' => $students,
             'suspicious_examiners' => $examiners,
             'suspicious_devices' => $devices,
@@ -123,16 +218,18 @@ class RiskIntelligenceService
 
         return [
             'source' => 'live',
-            'source_label' => 'Live Summary',
+            'source_label' => 'Live System Summary',
             'status' => 'Live summary available',
-            'notice' => 'Live database summary is shown below. Enhanced scoring becomes available after the intelligence report runs.',
+            'notice' => 'Current activity is shown from live system records. Enhanced trend analysis can be refreshed for deeper review.',
             'error' => null,
             'generated_at' => now()->toIso8601String(),
             'last_updated_label' => 'Generated live for this request',
-            'freshness_label' => 'Source: Live database summary',
+            'freshness_label' => 'Source: Current system records',
             'summary' => $summary,
             'risk_overview' => [
+                'critical_risk_students_count' => collect($students)->where('risk_level', 'critical')->count(),
                 'high_risk_students_count' => collect($students)->where('risk_level', 'high')->count(),
+                'medium_risk_students_count' => collect($students)->where('risk_level', 'medium')->count(),
                 'suspicious_examiners_count' => count($examiners),
                 'suspicious_devices_count' => count($devices),
                 'suspicious_ips_count' => count($ips),
@@ -143,10 +240,12 @@ class RiskIntelligenceService
                 'low' => collect($students)->where('risk_level', 'low')->count(),
                 'medium' => collect($students)->where('risk_level', 'medium')->count(),
                 'high' => collect($students)->where('risk_level', 'high')->count(),
+                'critical' => collect($students)->where('risk_level', 'critical')->count(),
             ],
             'department_trends' => $departmentTrends,
             'level_trends' => $levelTrends,
             'key_observations' => $observations,
+            'student_risks' => $students,
             'high_risk_students' => $students,
             'suspicious_examiners' => $examiners,
             'suspicious_devices' => $devices,
@@ -196,26 +295,24 @@ class RiskIntelligenceService
         $select = [
             'qr_tokens.student_id as matric_no',
             'verification_logs.decision',
+            'verification_logs.token_id',
+            'verification_logs.timestamp',
+            'verification_logs.device_fp',
+            'verification_logs.ip_address',
             'qr_tokens.status as token_status',
             DB::raw('NULL as student_name'),
             DB::raw('NULL as level'),
             DB::raw('NULL as department'),
-            DB::raw('NULL as verified_at'),
         ];
 
         if ($this->hasTable('students')) {
             $query->leftJoin('students', 'qr_tokens.student_id', '=', 'students.matric_no');
-            $select[3] = 'students.full_name as student_name';
-            $select[4] = 'students.level';
+            $select[7] = 'students.full_name as student_name';
+            $select[8] = 'students.level';
 
             if ($this->hasTable('departments')) {
                 $query->leftJoin('departments', 'students.department_id', '=', 'departments.dept_id');
-                $select[5] = 'departments.dept_name as department';
-            }
-
-            if ($this->hasTable('payment_records')) {
-                $query->leftJoin('payment_records', 'students.matric_no', '=', 'payment_records.student_id');
-                $select[6] = 'payment_records.verified_at';
+                $select[9] = 'departments.dept_name as department';
             }
         }
 
@@ -229,25 +326,52 @@ class RiskIntelligenceService
             $first = $logs->first();
             $rejected = $logs->where('decision', 'REJECTED')->count();
             $duplicate = $logs->where('decision', 'DUPLICATE')->count();
-            $tokenStatus = strtoupper((string) ($first->token_status ?? ''));
+            $totalScans = $logs->count();
+            $uniqueDevices = $logs->pluck('device_fp')->filter()->unique()->count();
+            $uniqueIps = $logs->pluck('ip_address')->filter()->unique()->count();
+            $repeatedTokens = $logs->groupBy('token_id')->filter(fn (Collection $tokenLogs) => $tokenLogs->count() > 1)->count();
+            $hasCloseAttempts = $this->hasCloseAttempts($logs->pluck('timestamp')->filter()->all());
+            $tokenStatuses = $logs->pluck('token_status')->filter()->map(fn ($status) => strtoupper((string) $status))->unique();
+            $hasVerifiedPayment = $this->hasVerifiedPayment($matric);
             $score = 0;
             $reasons = [];
 
-            if ($duplicate >= 2) {
+            if ($duplicate > 0 && $tokenStatuses->contains('USED')) {
+                $score += 40;
+                $reasons[] = 'This exam pass was scanned again after it had already been approved';
+            }
+            if ($duplicate >= 1) {
                 $score += 35;
-                $reasons[] = $duplicate . ' duplicate scan attempts';
+                $reasons[] = $duplicate . ' repeated scan attempt(s)';
             }
             if ($rejected >= 2) {
-                $score += 30;
+                $score += 25;
                 $reasons[] = $rejected . ' rejected scan attempts';
             }
-            if (empty($first->verified_at)) {
+            if ($uniqueDevices >= 2) {
+                $score += 20;
+                $reasons[] = 'same student scanned from multiple devices';
+            }
+            if ($uniqueIps >= 2) {
+                $score += 20;
+                $reasons[] = 'unusual network activity for the same student';
+            }
+            if (! $hasVerifiedPayment) {
                 $score += 20;
                 $reasons[] = 'payment is missing or unverified';
             }
-            if ($tokenStatus !== '' && ! in_array($tokenStatus, ['UNUSED', 'USED'], true)) {
+            $suspiciousStatuses = $tokenStatuses->reject(fn ($status) => in_array($status, ['UNUSED', 'USED'], true));
+            if ($suspiciousStatuses->isNotEmpty()) {
                 $score += 15;
-                $reasons[] = 'token status is ' . $tokenStatus;
+                $reasons[] = 'exam pass status needs review';
+            }
+            if ($hasCloseAttempts) {
+                $score += 15;
+                $reasons[] = 'multiple scan attempts occurred within two minutes';
+            }
+            if ($totalScans >= 4) {
+                $score += 10;
+                $reasons[] = 'high scan attempt count for one exam access';
             }
 
             return $this->studentRow([
@@ -258,7 +382,11 @@ class RiskIntelligenceService
                 'score' => $score,
                 'risk_level' => $this->riskLevel($score),
                 'reasons' => $reasons,
-                'recommendation' => $score > 0 ? 'Review this student access activity before closing the session.' : 'No action required.',
+                'duplicate_count' => $duplicate,
+                'rejected_count' => $rejected,
+                'total_scans' => $totalScans,
+                'last_activity' => optional($logs->sortByDesc('timestamp')->first())->timestamp,
+                'recommendation' => $score > 0 ? 'Review this student scan history before clearing the record.' : 'No action required.',
             ]);
         })->filter(fn ($row) => ($row['score'] ?? 0) > 0)->sortByDesc('score')->take(15)->values()->all();
     }
@@ -270,11 +398,25 @@ class RiskIntelligenceService
         }
 
         $query = DB::table('verification_logs');
-        $select = ['verification_logs.examiner_id', 'verification_logs.decision', DB::raw('NULL as examiner_name')];
+        $select = [
+            'verification_logs.examiner_id',
+            'verification_logs.decision',
+            'verification_logs.token_id',
+            'verification_logs.timestamp',
+            'verification_logs.device_fp',
+            'verification_logs.ip_address',
+            DB::raw('NULL as examiner_name'),
+            DB::raw('NULL as matric_no'),
+        ];
 
         if ($this->hasTable('examiners')) {
             $query->leftJoin('examiners', 'verification_logs.examiner_id', '=', 'examiners.examiner_id');
-            $select[2] = 'examiners.full_name as examiner_name';
+            $select[6] = 'examiners.full_name as examiner_name';
+        }
+
+        if ($this->hasTable('qr_tokens')) {
+            $query->leftJoin('qr_tokens', 'verification_logs.token_id', '=', 'qr_tokens.token_id');
+            $select[7] = 'qr_tokens.student_id as matric_no';
         }
 
         $rows = $query->select($select)->limit(1000)->get()
@@ -287,20 +429,41 @@ class RiskIntelligenceService
             $approved = $logs->where('decision', 'APPROVED')->count();
             $rejected = $logs->where('decision', 'REJECTED')->count();
             $duplicate = $logs->where('decision', 'DUPLICATE')->count();
+            $repeatedTokens = $logs->groupBy('token_id')->filter(fn (Collection $tokenLogs) => $tokenLogs->count() > 1)->count();
+            $uniqueDevices = $logs->pluck('device_fp')->filter()->unique()->count();
+            $uniqueIps = $logs->pluck('ip_address')->filter()->unique()->count();
+            $suspiciousStudents = $logs->whereIn('decision', ['DUPLICATE', 'REJECTED'])->pluck('matric_no')->filter()->unique()->count();
+            $rapidActivity = $this->hasCloseAttempts($logs->pluck('timestamp')->filter()->all());
             $score = 0;
             $reasons = [];
 
-            if ($duplicate >= 3) {
-                $score += 25;
-                $reasons[] = 'high duplicate scan count';
-            }
-            if ($rejected >= 3) {
+            if ($duplicate >= 1) {
                 $score += 30;
-                $reasons[] = 'high rejected scan count';
+                $reasons[] = 'repeated scan attempts recorded';
+            }
+            if ($rejected >= 2) {
+                $score += 25;
+                $reasons[] = 'rejected scan count requires review';
+            }
+            if ($repeatedTokens >= 1) {
+                $score += 20;
+                $reasons[] = 'same exam pass scanned repeatedly';
             }
             if ($logs->count() >= 5 && $logs->count() > ($average * 1.5)) {
-                $score += 15;
+                $score += 20;
                 $reasons[] = 'scan volume is high compared with peers';
+            }
+            if ($rapidActivity) {
+                $score += 15;
+                $reasons[] = 'scan attempts happened too rapidly';
+            }
+            if ($suspiciousStudents >= 2) {
+                $score += 15;
+                $reasons[] = 'linked to multiple suspicious student attempts';
+            }
+            if (($uniqueDevices + $uniqueIps) >= 4) {
+                $score += 10;
+                $reasons[] = 'scanner activity spans several device or network signals';
             }
 
             return $this->examinerRow([
@@ -313,7 +476,9 @@ class RiskIntelligenceService
                 'suspicious_score' => $score,
                 'risk_level' => $this->riskLevel($score),
                 'reasons' => $reasons,
-                'recommendation' => $score > 0 ? 'Review examiner activity log and scanner assignment.' : 'No action required.',
+                'suspicious_students_count' => $suspiciousStudents,
+                'last_activity' => optional($logs->sortByDesc('timestamp')->first())->timestamp,
+                'recommendation' => $score > 0 ? 'Confirm whether the repeated scans were intentional.' : 'No action required.',
             ]);
         })->filter(fn ($row) => ($row['suspicious_score'] ?? 0) > 0)->sortByDesc('suspicious_score')->take(15)->values()->all();
     }
@@ -396,7 +561,8 @@ class RiskIntelligenceService
     {
         return $rows->filter(fn ($row) => ! empty($row->{$field}))
             ->groupBy($field)
-            ->map(function (Collection $logs, string $identifier) use ($type) {
+            ->map(function (Collection $logs, string|int|null $identifier = null) use ($field, $type) {
+                $identifier = (string) ($identifier ?? $logs->first()?->{$field} ?? '-');
                 $students = $logs->pluck('matric_no')->filter()->unique()->count();
                 $examiners = $logs->pluck('examiner_id')->filter()->unique()->count();
                 $rejected = $logs->where('decision', 'REJECTED')->count();
@@ -404,21 +570,21 @@ class RiskIntelligenceService
                 $score = 0;
                 $reasons = [];
 
-                if ($students >= 4) {
+                if ($students >= 3) {
+                    $score += 30;
+                    $reasons[] = 'scanner device appears across many students';
+                }
+                if ($rejected >= 2) {
                     $score += 25;
-                    $reasons[] = 'identifier appears across many students';
+                    $reasons[] = 'many rejected scans from this scanner signal';
                 }
-                if ($rejected >= 3) {
-                    $score += 20;
-                    $reasons[] = 'many rejected scans from this identifier';
-                }
-                if ($duplicate >= 3) {
-                    $score += 20;
-                    $reasons[] = 'many duplicate scans from this identifier';
+                if ($duplicate >= 1) {
+                    $score += 25;
+                    $reasons[] = 'many repeated scans from this scanner signal';
                 }
                 if ($examiners >= 2) {
                     $score += 15;
-                    $reasons[] = 'identifier linked to multiple examiners';
+                    $reasons[] = 'scanner signal linked to multiple examiners';
                 }
 
                 return $this->deviceRow([
@@ -431,30 +597,31 @@ class RiskIntelligenceService
                     'duplicate_count' => $duplicate,
                     'risk_level' => $this->riskLevel($score),
                     'reasons' => $reasons,
-                    'recommendation' => $score > 0 ? 'Review scanner/device context for repeated risk patterns.' : 'No action required.',
-                ]);
+                    'recommendation' => $score > 0 ? 'Review scanner assignment and repeated activity patterns.' : 'No action required.',
+                ], $type);
             })->filter(fn ($row) => ! empty($row['reasons']))->sortByDesc('total_scans')->take(15)->values()->all();
     }
 
     private function fallbackObservations(array $summary, array $students, array $examiners, array $devices, array $ips): array
     {
-        $items = ['Python-enhanced report has not been generated yet; showing live Laravel summary.'];
+        $items = ['Current scan activity is being shown from live system records.'];
 
         if ($summary['total_scans'] === 0) {
             $items[] = 'No verification scan activity has been recorded yet.';
         }
         if ($summary['duplicate_count'] > 0) {
-            $items[] = $summary['duplicate_count'] . ' duplicate scan attempt(s) detected.';
+            $items[] = $summary['duplicate_count'] . ' repeated scan attempt(s) detected.';
+            $items[] = 'Repeated verification activity is visible in the live scan logs.';
         }
         if ($summary['rejected_count'] > 0) {
             $items[] = $summary['rejected_count'] . ' rejected scan attempt(s) detected.';
         }
         $items[] = count($students) > 0 ? count($students) . ' student risk record(s) require review.' : 'No high-risk student activity detected from current records.';
         if (count($examiners) > 0) {
-            $items[] = 'One or more examiners have elevated rejected or duplicate scan activity.';
+            $items[] = 'One or more examiners have elevated rejected or repeated scan activity.';
         }
         if ((count($devices) + count($ips)) > 0) {
-            $items[] = 'Device/IP patterns are available for review.';
+            $items[] = 'Scanner device or network patterns are available for review.';
         }
 
         return $items;
@@ -463,21 +630,21 @@ class RiskIntelligenceService
     private function fallbackRecommendations(array $summary, array $students, array $examiners, array $devices, array $ips): array
     {
         $items = [
-            'Use enhanced risk scoring during active exam periods for deeper device and student pattern review.',
+            'Use enhanced risk analysis during active exam periods for deeper scanner and student pattern review.',
             'Keep demo mode disabled for real production usage.',
         ];
 
         if ($summary['duplicate_count'] > 0) {
-            $items[] = 'Review duplicate scan attempts before closing the exam session.';
+            $items[] = 'Review repeated scan attempts before closing the exam session.';
         }
         if (count($examiners) > 0) {
             $items[] = 'Confirm suspicious examiner activity if rejected scans are unusually high.';
         }
         if (count($students) > 0) {
-            $items[] = 'Review flagged student payment, QR token, and scan history.';
+            $items[] = 'Review flagged student payment, exam pass, and scan history.';
         }
         if ((count($devices) + count($ips)) > 0) {
-            $items[] = 'Check whether repeated device/IP patterns match expected scanner assignments.';
+            $items[] = 'Check whether repeated scanner or network patterns match expected assignments.';
         }
 
         return $items;
@@ -506,6 +673,47 @@ class RiskIntelligenceService
         ];
     }
 
+    private function warningShape(?array $row, string $clearMessage): array
+    {
+        if (! $row) {
+            return [
+                'has_warning' => false,
+                'label' => 'No warning activity',
+                'level' => 'low',
+                'message' => $clearMessage,
+                'reasons' => [],
+                'recommendation' => 'No action required.',
+                'duplicate_count' => 0,
+                'rejected_count' => 0,
+                'total_scans' => 0,
+                'last_activity' => '',
+                'students_affected' => 0,
+            ];
+        }
+
+        $level = strtolower((string) ($row['risk_level'] ?? 'medium'));
+
+        return [
+            'has_warning' => true,
+            'label' => match ($level) {
+                'critical' => 'Critical review',
+                'high' => 'High risk',
+                'medium' => 'Needs review',
+                default => 'Review',
+            },
+            'level' => $level,
+            'message' => $this->nonEmptyList($row['reasons'] ?? [])[0] ?? 'Repeated scan activity needs review.',
+            'reasons' => $this->nonEmptyList($row['reasons'] ?? []),
+            'recommendation' => (string) ($row['recommendation'] ?? 'Review the scan history and confirm whether repeated scans were intentional.'),
+            'duplicate_count' => (int) ($row['duplicate_count'] ?? 0),
+            'rejected_count' => (int) ($row['rejected_count'] ?? 0),
+            'total_scans' => (int) ($row['total_scans'] ?? 0),
+            'last_activity' => (string) ($row['last_activity'] ?? ''),
+            'students_affected' => (int) ($row['suspicious_students_count'] ?? 0),
+            'score' => (int) ($row['score'] ?? $row['suspicious_score'] ?? 0),
+        ];
+    }
+
     private function studentRow(array $row): array
     {
         $score = (int) ($row['score'] ?? 0);
@@ -518,7 +726,11 @@ class RiskIntelligenceService
             'score' => $score,
             'risk_level' => strtolower((string) ($row['risk_level'] ?? $this->riskLevel($score))),
             'reasons' => $this->nonEmptyList($row['reasons'] ?? []),
-            'recommendation' => (string) ($row['recommendation'] ?? 'Review this student activity.'),
+            'duplicate_count' => (int) ($row['duplicate_count'] ?? 0),
+            'rejected_count' => (int) ($row['rejected_count'] ?? 0),
+            'total_scans' => (int) ($row['total_scans'] ?? 0),
+            'last_activity' => (string) ($row['last_activity'] ?? ''),
+            'recommendation' => $this->displayText((string) ($row['recommendation'] ?? 'Review this student activity.')),
         ];
     }
 
@@ -536,7 +748,9 @@ class RiskIntelligenceService
             'suspicious_score' => $score,
             'risk_level' => strtolower((string) ($row['risk_level'] ?? $this->riskLevel($score))),
             'reasons' => $this->nonEmptyList($row['reasons'] ?? []),
-            'recommendation' => (string) ($row['recommendation'] ?? 'Review examiner activity log.'),
+            'suspicious_students_count' => (int) ($row['suspicious_students_count'] ?? 0),
+            'last_activity' => (string) ($row['last_activity'] ?? ''),
+            'recommendation' => $this->displayText((string) ($row['recommendation'] ?? 'Review examiner activity log.')),
         ];
     }
 
@@ -552,7 +766,7 @@ class RiskIntelligenceService
             'duplicate_count' => (int) ($row['duplicate_count'] ?? 0),
             'risk_level' => strtolower((string) ($row['risk_level'] ?? 'low')),
             'reasons' => $this->nonEmptyList($row['reasons'] ?? []),
-            'recommendation' => (string) ($row['recommendation'] ?? 'Review scanner/device context.'),
+            'recommendation' => $this->displayText((string) ($row['recommendation'] ?? 'Review scanner context.')),
         ];
     }
 
@@ -573,12 +787,143 @@ class RiskIntelligenceService
 
     private function nonEmptyList(mixed $value): array
     {
-        return collect((array) $value)->filter(fn ($item) => trim((string) $item) !== '')->values()->map(fn ($item) => (string) $item)->all();
+        return collect((array) $value)
+            ->filter(fn ($item) => trim((string) $item) !== '')
+            ->values()
+            ->map(fn ($item) => $this->displayText((string) $item))
+            ->all();
+    }
+
+    private function displayText(string $text): string
+    {
+        $text = str_ireplace([
+            'QR token was scanned again after approval',
+            'same student/token scanned repeatedly',
+            'same token scanned repeatedly',
+            'token was scanned again after approval',
+            'duplicate/repeated scan attempt(s)',
+            'duplicate scan attempts',
+            'duplicate scans',
+            'Duplicate scans',
+            'duplicate scan',
+            'Duplicate scan',
+            'duplicate attempts',
+            'Duplicate attempts',
+            'duplicate device/IP patterns',
+            'device/IP patterns',
+            'source IP',
+            'IP context',
+            'Device ',
+            'token status',
+            'Token status',
+            'token',
+            'Token',
+            'QR payload',
+            'payload',
+            'HMAC',
+            'AES',
+            'JSON',
+            'storage/app/risk-analysis',
+            'php artisan',
+        ], [
+            'This exam pass was scanned again after it had already been approved',
+            'same student or exam pass scanned repeatedly',
+            'same exam pass scanned repeatedly',
+            'This exam pass was scanned again after it had already been approved',
+            'repeated scan attempt(s)',
+            'repeated scan attempts',
+            'repeated scans',
+            'Repeated scans',
+            'repeated scan',
+            'Repeated scan',
+            'repeated attempts',
+            'Repeated attempts',
+            'scanner and network patterns',
+            'scanner and network patterns',
+            'network',
+            'network context',
+            'Scanner device ',
+            'exam pass status',
+            'Exam pass status',
+            'exam pass',
+            'Exam pass',
+            'QR code',
+            'scan information',
+            'secure check',
+            'secure check',
+            'report',
+            'risk analysis records',
+            'admin command',
+        ], $text);
+
+        $text = preg_replace('/\b(?:\d{1,3}\.){3}\d{1,3}\b/', 'network pattern', $text) ?? $text;
+        $text = preg_replace('/\b[a-f0-9]{12,}\b/i', 'scanner device pattern', $text) ?? $text;
+        $text = str_replace('Scanner device scanner device pattern', 'A scanner device pattern', $text);
+        $text = str_replace('IP network pattern', 'A network pattern', $text);
+        $text = str_replace('scanner Scanner device', 'scanner device', $text);
+        $text = str_replace('Scanner Scanner device', 'Scanner device', $text);
+        $text = str_replace('scanner-Scanner device', 'scanner-device', $text);
+        $text = str_replace('shared-Scanner device', 'shared-device', $text);
+        $text = str_replace('network/network context', 'network context', $text);
+
+        return trim($text);
     }
 
     private function riskLevel(int $score): string
     {
-        return $score >= 61 ? 'high' : ($score >= 31 ? 'medium' : 'low');
+        if ($score >= 75) {
+            return 'critical';
+        }
+
+        if ($score >= 50) {
+            return 'high';
+        }
+
+        return $score >= 25 ? 'medium' : 'low';
+    }
+
+    private function hasVerifiedPayment(string $matric): bool
+    {
+        if (! $this->hasTable('payment_records')) {
+            return false;
+        }
+
+        return DB::table('payment_records')
+            ->where('student_id', $matric)
+            ->whereNotNull('verified_at')
+            ->exists();
+    }
+
+    private function hasCloseAttempts(array $timestamps): bool
+    {
+        $times = collect($timestamps)
+            ->map(function ($timestamp) {
+                try {
+                    return \Carbon\Carbon::parse($timestamp)->timestamp;
+                } catch (\Throwable) {
+                    return null;
+                }
+            })
+            ->filter()
+            ->sort()
+            ->values();
+
+        for ($i = 1; $i < $times->count(); $i++) {
+            if (($times[$i] - $times[$i - 1]) <= 120) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function latestScanTimestamp(): ?string
+    {
+        if (! $this->hasTable('verification_logs')) {
+            return null;
+        }
+
+        return DB::table('verification_logs')->max('timestamp');
     }
 
     private function rate(int $count, int $total): float

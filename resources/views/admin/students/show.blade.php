@@ -13,12 +13,17 @@
             ? 'TEST-****'
             : str_repeat('*', max(strlen((string) $payment->rrr_number) - 4, 0)) . substr((string) $payment->rrr_number, -4))
         : 'Not recorded yet';
-    $tokenReference = $token ? substr((string) $token->token_id, 0, 8) . '...' . substr((string) $token->token_id, -4) : 'Not issued';
+    $passStatus = match (strtoupper((string) ($token->status ?? ''))) {
+        'UNUSED' => 'Ready',
+        'USED' => 'Already scanned',
+        'REVOKED' => 'Unavailable',
+        default => $token ? \Illuminate\Support\Str::headline(strtolower((string) $token->status)) : 'Not issued',
+    };
     $totalScans = (int) collect($scanCounts)->sum();
     $readiness = collect([
         ['label' => 'Student record found', 'ok' => true],
         ['label' => 'Payment verified', 'ok' => (bool) $payment],
-        ['label' => 'QR issued', 'ok' => (bool) $token],
+        ['label' => 'Exam pass issued', 'ok' => (bool) $token],
         ['label' => 'Timetable assigned', 'ok' => $timetableCount > 0],
         ['label' => 'Exam pass ready', 'ok' => (bool) ($payment && $token)],
     ]);
@@ -84,6 +89,26 @@
             </div>
         </div>
     </section>
+
+    <section class="admin-section">
+        <div class="admin-section-head">
+            <h2>Review Status</h2>
+            <span class="admin-status {{ ($studentWarning['has_warning'] ?? false) ? 'amber' : 'green' }}">{{ $studentWarning['label'] ?? 'No warning activity' }}</span>
+        </div>
+        <div class="admin-section-body">
+            @if($studentWarning['has_warning'] ?? false)
+                <div class="admin-info-list">
+                    <div class="admin-info-row"><span class="admin-label">What happened</span><span class="admin-value">{{ $studentWarning['message'] }}</span></div>
+                    <div class="admin-info-row"><span class="admin-label">Repeated Scans</span><span class="admin-value mono">{{ $studentWarning['duplicate_count'] ?? 0 }}</span></div>
+                    <div class="admin-info-row"><span class="admin-label">Rejected Scans</span><span class="admin-value mono">{{ $studentWarning['rejected_count'] ?? 0 }}</span></div>
+                    <div class="admin-info-row"><span class="admin-label">Last Activity</span><span class="admin-value">{{ ! empty($studentWarning['last_activity']) ? \Carbon\Carbon::parse($studentWarning['last_activity'])->format('M j, Y g:i A') : 'Not recorded yet' }}</span></div>
+                    <div class="admin-info-row"><span class="admin-label">Recommended Action</span><span class="admin-value">{{ $studentWarning['recommendation'] }}</span></div>
+                </div>
+            @else
+                <div class="admin-empty">{{ $studentWarning['message'] ?? 'No warning activity found for this student.' }}</div>
+            @endif
+        </div>
+    </section>
 </div>
 
 <div class="admin-grid two" style="margin-top:16px">
@@ -102,12 +127,11 @@
     </section>
 
     <section class="admin-section">
-        <div class="admin-section-head"><h2>Exam Access</h2><span class="admin-status {{ $token ? 'green' : 'amber' }}">{{ $token ? $token->status : 'Missing' }}</span></div>
+        <div class="admin-section-head"><h2>Exam Access</h2><span class="admin-status {{ $token ? 'green' : 'amber' }}">{{ $passStatus }}</span></div>
         <div class="admin-section-body">
             <div class="admin-info-list">
-                <div class="admin-info-row"><span class="admin-label">Token Reference</span><span class="admin-value mono">{{ $tokenReference }}</span></div>
                 <div class="admin-info-row"><span class="admin-label">Issued At</span><span class="admin-value">{{ $token->issued_at ?? 'Not recorded yet' }}</span></div>
-                <div class="admin-info-row"><span class="admin-label">Used At</span><span class="admin-value">{{ $token->used_at ?? 'Not used yet' }}</span></div>
+                <div class="admin-info-row"><span class="admin-label">Scanned At</span><span class="admin-value">{{ $token->used_at ?? 'Not scanned yet' }}</span></div>
                 <div class="admin-info-row"><span class="admin-label">Timetable Entries</span><span class="admin-value">{{ number_format($timetableCount) }}</span></div>
             </div>
         </div>
@@ -122,10 +146,10 @@
                 <div class="metric-cell"><span class="metric-label">Total</span><span class="metric-value">{{ $totalScans }}</span></div>
                 <div class="metric-cell"><span class="metric-label">Approved</span><span class="metric-value">{{ $scanCounts['APPROVED'] ?? 0 }}</span></div>
                 <div class="metric-cell"><span class="metric-label">Rejected</span><span class="metric-value">{{ $scanCounts['REJECTED'] ?? 0 }}</span></div>
-                <div class="metric-cell"><span class="metric-label">Duplicate</span><span class="metric-value">{{ $scanCounts['DUPLICATE'] ?? 0 }}</span></div>
+                <div class="metric-cell"><span class="metric-label">Repeated</span><span class="metric-value">{{ $scanCounts['DUPLICATE'] ?? 0 }}</span></div>
             </div>
             <div class="admin-info-list" style="margin-top:14px">
-                <div class="admin-info-row"><span class="admin-label">Latest Result</span><span class="admin-value">{{ $latestScan->decision ?? 'Not recorded yet' }}</span></div>
+                <div class="admin-info-row"><span class="admin-label">Latest Result</span><span class="admin-value">{{ ($latestScan->decision ?? null) === 'DUPLICATE' ? 'REPEATED' : ($latestScan->decision ?? 'Not recorded yet') }}</span></div>
                 <div class="admin-info-row"><span class="admin-label">Last Scanned At</span><span class="admin-value">{{ $latestScan->timestamp ?? 'Not recorded yet' }}</span></div>
                 <div class="admin-info-row"><span class="admin-label">Examiner</span><span class="admin-value">{{ $latestScan->examiner_name ?? 'Not recorded yet' }}</span></div>
             </div>
@@ -156,19 +180,18 @@
     <div class="admin-section-body">
         <div class="admin-table-wrap">
             <table class="admin-table">
-                <thead><tr><th>Time</th><th>Decision</th><th>Examiner</th><th>Token</th><th>IP/Device</th><th>Action</th></tr></thead>
+                <thead><tr><th>Time</th><th>Decision</th><th>Examiner</th><th>Review Status</th><th>Action</th></tr></thead>
                 <tbody>
                     @forelse($scanHistory as $row)
                         <tr>
                             <td class="mono">{{ $row->timestamp }}</td>
-                            <td><span class="admin-status {{ $row->decision === 'APPROVED' ? 'green' : ($row->decision === 'DUPLICATE' ? 'amber' : 'red') }}">{{ $row->decision }}</span></td>
+                            <td><span class="admin-status {{ $row->decision === 'APPROVED' ? 'green' : ($row->decision === 'DUPLICATE' ? 'amber' : 'red') }}">{{ $row->decision === 'DUPLICATE' ? 'REPEATED' : $row->decision }}</span></td>
                             <td>{{ $row->examiner_name ?? 'Examiner unavailable' }}</td>
-                            <td class="mono safe">{{ Str::limit($row->token_id, 18) }}</td>
-                            <td class="safe">{{ $row->ip_address ?? 'Not available' }} · {{ $row->device_fp ?? 'Not available' }}</td>
+                            <td>{{ $row->decision === 'DUPLICATE' ? 'Repeated scan needs review' : 'Recorded' }}</td>
                             <td><a class="admin-action ghost" href="{{ route('admin.scan-logs.show', $row->log_id) }}">View</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="6"><div class="admin-empty">No scan history for this student yet.</div></td></tr>
+                        <tr><td colspan="5"><div class="admin-empty">No scan history for this student yet.</div></td></tr>
                     @endforelse
                 </tbody>
             </table>

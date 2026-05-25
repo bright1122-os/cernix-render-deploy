@@ -456,7 +456,7 @@
         <div class="chapter">
             <div class="chapter-num">Cryptography</div>
             <h2>Security is enforced by the server.</h2>
-            <p>The QR pass is protected by the Laravel application and checked against the token lifecycle before admission. Once approved, a repeated scan produces a duplicate warning.</p>
+            <p>The QR pass is protected by the Laravel application and checked server-side before admission. Once approved, a repeated scan produces a review warning.</p>
             <div class="code-block">1. Confirm student and session
 2. Confirm payment state
 3. Verify one-time QR status

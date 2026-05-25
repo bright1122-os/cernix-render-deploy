@@ -14,16 +14,16 @@
         <div><span>Total Scans</span><b data-metric="total">{{ $metrics['total'] }}</b></div>
         <div><span>Approved</span><b data-metric="approved">{{ $metrics['approved'] }}</b></div>
         <div><span>Rejected</span><b data-metric="rejected">{{ $metrics['rejected'] }}</b></div>
-        <div><span>Duplicate</span><b data-metric="duplicate">{{ $metrics['duplicate'] }}</b></div>
+        <div><span>Repeated</span><b data-metric="duplicate">{{ $metrics['duplicate'] }}</b></div>
         <div><span>Approval Rate</span><b data-metric="approval_rate">{{ $metrics['approval_rate'] }}%</b></div>
         <div><span>Rejected Rate</span><b data-metric="rejection_rate">{{ $metrics['rejection_rate'] }}%</b></div>
-        <div><span>Duplicate Rate</span><b data-metric="duplicate_rate">{{ $metrics['duplicate_rate'] }}%</b></div>
+        <div><span>Repeated Rate</span><b data-metric="duplicate_rate">{{ $metrics['duplicate_rate'] }}%</b></div>
     </div>
 </section>
 
 <div style="display:grid;gap:18px;margin-top:18px">
     <section class="ex-panel ex-section-pad">
-        <h2 style="margin:0 0 12px;font-size:20px">Approved / Rejected / Duplicate</h2>
+        <h2 style="margin:0 0 12px;font-size:20px">Approved / Rejected / Repeated</h2>
         @if(array_sum($chart['values']) > 0)
             <div style="width:min(340px,100%);margin:auto"><canvas id="scanDonut"></canvas></div>
         @else

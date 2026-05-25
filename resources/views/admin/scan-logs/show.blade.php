@@ -5,8 +5,13 @@
 @section('admin-content')
 @php
     $decisionClass = $scan->decision === 'APPROVED' ? 'green' : ($scan->decision === 'DUPLICATE' ? 'amber' : 'red');
-    $tokenRef = $scan->token_id ? Str::limit($scan->token_id, 18) : 'Not available';
-    $issuedUsed = ($token->issued_at ?? $scan->issued_at ?? 'Not available') . ' / ' . ($token->used_at ?? $scan->used_at ?? 'Not available');
+    $passStatus = match (strtoupper((string) ($token->status ?? $scan->token_status ?? ''))) {
+        'UNUSED' => 'Ready',
+        'USED' => 'Already scanned',
+        'REVOKED' => 'Unavailable',
+        default => ($token->status ?? $scan->token_status ?? 'Not available'),
+    };
+    $issuedUsed = ($token->issued_at ?? $scan->issued_at ?? 'Not available') . ' / ' . ($token->used_at ?? $scan->used_at ?? 'Not scanned yet');
 @endphp
 
 <style>
@@ -33,7 +38,7 @@
     <div>
         <div class="cx-eyebrow">Verification Detail</div>
         <h1>Scan #{{ $scan->log_id }}</h1>
-        <p>Compact trace view for the scan result, resolved student identity, QR/payment state, and previous verification activity.</p>
+        <p>Compact trace view for the scan result, resolved student identity, exam pass state, and previous verification activity.</p>
     </div>
     <a class="admin-action ghost" href="{{ route('admin.scan-logs', ['highlight' => $scan->log_id]) }}">Back to Logs</a>
 </div>
@@ -52,11 +57,11 @@
         @else
             <div>
                 <h1 style="margin:0">Student unavailable</h1>
-                <p class="muted">The scan is preserved, but its token could not be resolved to a student record.</p>
+                <p class="muted">The scan is preserved, but its exam pass could not be resolved to a student record.</p>
             </div>
         @endif
         <div class="scan-case-actions">
-            <span class="admin-status {{ $decisionClass }}">{{ $scan->decision }}</span>
+            <span class="admin-status {{ $decisionClass }}">{{ $scan->decision === 'DUPLICATE' ? 'REPEATED' : $scan->decision }}</span>
             <span class="admin-value mono">#{{ $scan->log_id }}</span>
         </div>
     </section>
@@ -65,7 +70,7 @@
         <div class="metric-cell"><span class="metric-label">Total Scans</span><span class="metric-value">{{ $studentScans->count() }}</span></div>
         <div class="metric-cell"><span class="metric-label">Approved</span><span class="metric-value">{{ $counts['APPROVED'] ?? 0 }}</span></div>
         <div class="metric-cell"><span class="metric-label">Rejected</span><span class="metric-value">{{ $counts['REJECTED'] ?? 0 }}</span></div>
-        <div class="metric-cell"><span class="metric-label">Duplicate</span><span class="metric-value">{{ $counts['DUPLICATE'] ?? 0 }}</span></div>
+        <div class="metric-cell"><span class="metric-label">Repeated</span><span class="metric-value">{{ $counts['DUPLICATE'] ?? 0 }}</span></div>
     </section>
 
     <div class="scan-compact-grid">
@@ -74,17 +79,16 @@
             <div class="scan-panel-body">
                 <div class="scan-row"><span class="admin-label">Timestamp</span><span class="admin-value mono">{{ $scan->timestamp ?? 'Not available' }}</span></div>
                 <div class="scan-row"><span class="admin-label">Examiner</span><span class="admin-value">{{ $scan->examiner_name ?? $scan->examiner_username ?? 'Not available' }}</span></div>
-                <div class="scan-row"><span class="admin-label">Device / IP</span><span class="admin-value safe">{{ $scan->device_fp ?? 'Not available' }} · {{ $scan->ip_address ?? 'Not available' }}</span></div>
-                <div class="scan-row"><span class="admin-label">Decision</span><span class="admin-value"><span class="admin-status {{ $decisionClass }}">{{ $scan->decision }}</span></span></div>
+                <div class="scan-row"><span class="admin-label">Decision</span><span class="admin-value"><span class="admin-status {{ $decisionClass }}">{{ $scan->decision === 'DUPLICATE' ? 'REPEATED' : $scan->decision }}</span></span></div>
+                <div class="scan-row"><span class="admin-label">Review Status</span><span class="admin-value">{{ $scan->decision === 'DUPLICATE' ? 'Repeated scan needs review' : 'Recorded' }}</span></div>
             </div>
         </section>
 
         <section class="scan-panel">
-            <h2>Access / QR</h2>
+            <h2>Exam Pass</h2>
             <div class="scan-panel-body">
-                <div class="scan-row"><span class="admin-label">Token Reference</span><span class="admin-value mono">{{ $tokenRef }}</span></div>
-                <div class="scan-row"><span class="admin-label">QR Status</span><span class="admin-value">{{ $token->status ?? $scan->token_status ?? 'Not available' }}</span></div>
-                <div class="scan-row"><span class="admin-label">Issued / Used</span><span class="admin-value mono">{{ $issuedUsed }}</span></div>
+                <div class="scan-row"><span class="admin-label">Pass Status</span><span class="admin-value">{{ $passStatus }}</span></div>
+                <div class="scan-row"><span class="admin-label">Issued / Scanned</span><span class="admin-value mono">{{ $issuedUsed }}</span></div>
             </div>
         </section>
 
@@ -120,14 +124,14 @@
         <h2>Previous Scan History</h2>
         <div class="admin-table-wrap" style="border:0;border-radius:0">
             <table class="scan-history">
-                <thead><tr><th>Time</th><th>Decision</th><th>Examiner</th><th>Token</th><th>Action</th></tr></thead>
+                <thead><tr><th>Time</th><th>Decision</th><th>Examiner</th><th>Review Status</th><th>Action</th></tr></thead>
                 <tbody>
                     @forelse($studentScans as $row)
                         <tr>
                             <td class="mono">{{ $row->timestamp }}</td>
-                            <td><span class="admin-status {{ $row->decision === 'APPROVED' ? 'green' : ($row->decision === 'DUPLICATE' ? 'amber' : 'red') }}">{{ $row->decision }}</span></td>
+                            <td><span class="admin-status {{ $row->decision === 'APPROVED' ? 'green' : ($row->decision === 'DUPLICATE' ? 'amber' : 'red') }}">{{ $row->decision === 'DUPLICATE' ? 'REPEATED' : $row->decision }}</span></td>
                             <td>{{ $row->examiner_name ?? $row->examiner_username ?? 'Unavailable' }}</td>
-                            <td class="mono safe">{{ Str::limit($row->token_id, 16) }}</td>
+                            <td>{{ $row->decision === 'DUPLICATE' ? 'Repeated scan needs review' : 'Recorded' }}</td>
                             <td><a class="admin-action ghost" href="{{ route('admin.scan-logs.show', $row->log_id) }}">View</a></td>
                         </tr>
                     @empty

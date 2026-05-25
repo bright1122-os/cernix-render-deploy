@@ -436,7 +436,7 @@ ol.steps li b{display:block;font-family:'Inter',sans-serif;font-weight:600;font-
     <div class="chap-num">Chapter Two — The Solution</div>
     <h1 class="title serif">One verified pass. <em>One clean tap.</em></h1>
     <p class="body lede dropcap">Each registered student receives a single QR exam pass after identity, session, and payment state checks. It is not a paper slip or a serial number; it is a server-verifiable pass tied to one student and one exam context.</p>
-    <p class="body">At the hall door, the examiner scans the pass. The server checks the token state and records the decision centrally. Green means admit, red means deny, and amber means the pass has already been used.</p>
+    <p class="body">At the hall door, the examiner scans the pass. The server checks the pass state and records the decision centrally. Green means admit, red means deny, and amber means the pass has already been scanned.</p>
 
     <div class="pull serif">
       "We did not invent a new cipher. We applied a familiar one — carefully — to a problem the campus already had."
@@ -447,19 +447,19 @@ ol.steps li b{display:block;font-family:'Inter',sans-serif;font-weight:600;font-
   <!-- CHAPTER 3 — CRYPTO -->
   <section class="chapter" id="ch3" data-ch="03">
     <div class="chap-num">Chapter Three — The Cryptography</div>
-    <h1 class="title serif">Forging a pass means <em>breaking AES.</em></h1>
-    <p class="body lede dropcap">Every QR pass is protected by the Laravel application and verified server-side before admission. Examiners can scan and view decisions, but they do not generate passes or control the token lifecycle.</p>
+    <h1 class="title serif">Forging a pass means <em>failing server checks.</em></h1>
+    <p class="body lede dropcap">Every QR pass is protected by the Laravel application and verified server-side before admission. Examiners can scan and view decisions, but they do not generate passes or control pass approval.</p>
 
     <div class="code">
 <span class="com">// Verification summary</span>
 <span class="key">1.</span> Confirm student and exam context.
 <span class="key">2.</span> Confirm payment/clearance state.
-<span class="key">3.</span> Check one-time QR token status.
+<span class="key">3.</span> Check one-time QR pass status.
 <span class="key">4.</span> Record approved, rejected, or duplicate decision.
 <span class="ok">server verified</span>
     </div>
 
-    <p class="body">Once a token is approved at the door, its identifier is written into a one-time-use ledger. A second scan — from a screenshot, a sibling, anyone — surfaces an amber warning instead of a green flash.</p>
+    <p class="body">Once a pass is approved at the door, the scan is recorded as used. A second scan — from a screenshot or another phone — surfaces an amber warning instead of a green flash.</p>
   </section>
 
   <!-- CHAPTER 4 — FLOW -->

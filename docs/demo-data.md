@@ -56,7 +56,7 @@ Do not use Windows file paths, temporary upload paths, external portrait URLs, o
 
 ## Demo Payment Behavior
 
-Demo payment references are accepted only when demo mode is enabled. The demo payment shortcut confirms a demo school-fee payment for testing, but it does not bypass identity validation, department/level validation, QR security, token lifecycle rules, scanner verification, or production Remita behavior.
+Demo payment references are accepted only when demo mode is enabled. The demo payment shortcut confirms a demo school-fee payment for testing, but it does not bypass identity validation, department/level validation, QR security, exam pass approval rules, scanner verification, or production Remita behavior.
 
 For real production deployments, keep demo mode disabled.
 

@@ -14,13 +14,16 @@ class ExportRiskData extends Command
     public function handle(): int
     {
         $path = $this->option('path') ?: 'risk-analysis/scan_logs.json';
+        $latestPayments = DB::table('payment_records')
+            ->select('student_id', DB::raw('MAX(verified_at) as verified_at'), DB::raw('MAX(amount_confirmed) as amount_confirmed'), DB::raw('MAX(rrr_number) as rrr_number'))
+            ->groupBy('student_id');
 
         $rows = DB::table('verification_logs')
             ->leftJoin('qr_tokens', 'verification_logs.token_id', '=', 'qr_tokens.token_id')
             ->leftJoin('students', 'qr_tokens.student_id', '=', 'students.matric_no')
             ->leftJoin('departments', 'students.department_id', '=', 'departments.dept_id')
             ->leftJoin('examiners', 'verification_logs.examiner_id', '=', 'examiners.examiner_id')
-            ->leftJoin('payment_records', 'students.matric_no', '=', 'payment_records.student_id')
+            ->leftJoinSub($latestPayments, 'latest_payments', fn ($join) => $join->on('students.matric_no', '=', 'latest_payments.student_id'))
             ->orderByDesc('verification_logs.timestamp')
             ->select([
                 'students.matric_no',
@@ -36,9 +39,11 @@ class ExportRiskData extends Command
                 'verification_logs.timestamp',
                 'qr_tokens.status as token_status',
                 'qr_tokens.status as qr_status',
-                'payment_records.rrr_number',
-                'payment_records.amount_confirmed',
-                'payment_records.verified_at',
+                'qr_tokens.issued_at',
+                'qr_tokens.used_at',
+                'latest_payments.rrr_number',
+                'latest_payments.amount_confirmed',
+                'latest_payments.verified_at',
             ])
             ->get()
             ->map(fn ($row) => [

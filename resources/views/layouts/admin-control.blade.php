@@ -6,12 +6,13 @@
 @php
     $adminRole = session('examiner_role', 'admin');
     $adminRoleLabel = \Illuminate\Support\Str::headline(strtolower((string) $adminRole));
+    $warningCounts = app(\App\Services\RiskIntelligenceService::class)->getWarningCounts();
     $adminNav = [
         ['label' => 'Control Center', 'route' => 'admin.dashboard', 'match' => 'admin/dashboard'],
-        ['label' => 'Risk Intelligence', 'route' => 'admin.intelligence', 'match' => 'admin/intelligence*'],
-        ['label' => 'Students', 'route' => 'admin.students', 'match' => 'admin/students*'],
+        ['label' => 'Risk Intelligence', 'route' => 'admin.intelligence', 'match' => 'admin/intelligence*', 'badge' => $warningCounts['risk'] ?? 0],
+        ['label' => 'Students', 'route' => 'admin.students', 'match' => 'admin/students*', 'badge' => $warningCounts['students'] ?? 0],
         ['label' => 'Student Trace', 'route' => 'admin.student-trace', 'match' => 'admin/student-trace*'],
-        ['label' => 'Examiners', 'route' => 'admin.examiners', 'match' => 'admin/examiners*'],
+        ['label' => 'Examiners', 'route' => 'admin.examiners', 'match' => 'admin/examiners*', 'badge' => $warningCounts['examiners'] ?? 0],
         ['label' => 'Payments', 'route' => 'admin.payments', 'match' => 'admin/payments*'],
         ['label' => 'Timetable', 'route' => 'admin.timetable', 'match' => 'admin/timetable*'],
         ['label' => 'Verification Logs', 'route' => 'admin.scan-logs', 'match' => 'admin/scan-logs*'],
@@ -35,9 +36,11 @@
     .admin-role-pill { display: inline-flex; width: fit-content; margin-top: 8px; padding: 4px 8px; border-radius: 999px; background: rgba(15,32,80,.08); color: var(--navy); font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; transition: transform .16s ease, background .16s ease; }
     .admin-role-pill.super { background: rgba(5,150,105,.14); color: var(--emerald); }
     .admin-nav { display: grid; gap: 6px; }
-    .admin-nav a { min-height: 42px; display: flex; align-items: center; padding: 0 12px; border-radius: 13px; text-decoration: none; color: var(--ink-2); font-weight: 800; font-size: 13px; border: 1px solid transparent; transition: background .16s, border-color .16s, transform .16s; }
+    .admin-nav a { min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 12px; border-radius: 13px; text-decoration: none; color: var(--ink-2); font-weight: 800; font-size: 13px; border: 1px solid transparent; transition: background .16s, border-color .16s, transform .16s; }
     .admin-nav a:hover { background: var(--bg); border-color: var(--line); transform: translateX(2px); }
     .admin-nav a.active { background: var(--ink); color: #fff; box-shadow: 0 10px 22px -16px rgba(10,15,31,.45); }
+    .admin-nav-badge { min-width: 22px; height: 22px; padding: 0 7px; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; background:rgba(180,83,9,.13); color:var(--amber); font-size:11px; font-weight:950; }
+    .admin-nav a.active .admin-nav-badge { background:rgba(255,255,255,.2); color:#fff; }
     .admin-main { width: min(1280px, 100%); margin: 0 auto; padding: 22px 16px 56px; }
     .admin-page-head { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; margin-bottom: 18px; }
     .admin-page-head h1 { margin: 0; font-size: clamp(30px, 5vw, 46px); letter-spacing: -.06em; line-height: 1; }
@@ -148,7 +151,12 @@
             </div>
             <nav class="admin-nav" aria-label="Admin">
                 @foreach($adminNav as $item)
-                    <a href="{{ route($item['route']) }}" class="{{ request()->is($item['match']) ? 'active' : '' }}">{{ $item['label'] }}</a>
+                    <a href="{{ route($item['route']) }}" class="{{ request()->is($item['match']) ? 'active' : '' }}">
+                        <span>{{ $item['label'] }}</span>
+                        @if(($item['badge'] ?? 0) > 0)
+                            <span class="admin-nav-badge">{{ $item['badge'] }}</span>
+                        @endif
+                    </a>
                 @endforeach
                 <a href="{{ route('admin.logout') }}">Logout</a>
             </nav>
